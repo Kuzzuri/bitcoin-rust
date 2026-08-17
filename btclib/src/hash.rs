@@ -7,11 +7,15 @@ use wincode::config::Configuration;
 pub trait Encode: SchemaWrite<Configuration, Src = Self> {}
 impl<T: SchemaWrite<Configuration, Src = T>> Encode for T {}
 
+// Decode trait for wincode decodable data
+pub trait Decode<'de>: SchemaRead<'de, Configuration> {}
+impl<'de, T: SchemaRead<'de, Configuration>> Decode<'de> for T {}
+
 #[derive(SchemaWrite, SchemaRead, Debug)]
 pub struct Hash(U256);
 
 impl Hash {
-    pub fn new<T: Encode>(data: T) -> Self {
+    pub fn hash<T: Encode>(data: T) -> Self {
         let serialized = wincode::serialize(&data).unwrap();
         let hashed = Sha256::digest(serialized);
         Hash(U256::from_little_endian(&hashed))

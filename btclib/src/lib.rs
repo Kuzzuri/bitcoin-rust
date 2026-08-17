@@ -9,3 +9,6 @@ construct_uint! {
     #[derive(SchemaWrite, SchemaRead)]
     struct U256(4);
 }
+
+
+pub const VERSION: u8 = 1;

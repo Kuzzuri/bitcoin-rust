@@ -1,7 +1,9 @@
-use crate::crypto::PublicKey;
+use crate::crypto::{PublicKey, PrivateKey};
+use crate::hash::Hash;
 use crate::VERSION;
+use wincode::{SchemaRead, SchemaWrite};
 
-#[derive(Debug)]
+#[derive(SchemaWrite, SchemaRead, Debug)]
 pub struct Transaction {
     version: u8,
     input_count: u8,
@@ -21,16 +23,21 @@ impl Transaction {
             output: outputs,
             locktime: locktime,
         }
-   }
+    }
+    pub fn get_txid(&self) -> Hash {
+        let bytes = wincode::serialize(self).unwrap();
+        Hash::hash(Hash::hash(bytes))
+    }
+
 }
 
-#[derive(Debug)]
+#[derive(SchemaWrite, SchemaRead, Debug, Clone, Copy)]
 pub struct TransactionInput {
     txid: u32,
     vout: u8,
 }
 
-#[derive(Debug)]
+#[derive(SchemaWrite, SchemaRead, Debug, Clone, Copy)]
 pub struct TransactionOutput {
     amount: u8,
     public_key: PublicKey,

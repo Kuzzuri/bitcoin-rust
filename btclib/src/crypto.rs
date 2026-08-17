@@ -1,51 +1,101 @@
 use k256::{ecdsa::{Signature, SigningKey, VerifyingKey, Error as EcdsaError, signature::{Signer, Verifier}}};
 use k256::elliptic_curve::Generate;
+use wincode::{SchemaRead, SchemaWrite, TypeMeta};
+use wincode::config::ConfigCore;
+use wincode::WriteResult;
 
-#[derive(Debug)]
-struct PrivateKey (
+#[derive(SchemaWrite, SchemaRead, Debug, Clone)]
+pub struct PrivateKey (
+        #[wincode(with = "PrivKeySerializer")]
         SigningKey
     );
 
 impl PrivateKey {
-    fn new() -> Self {
+    pub fn new() -> Self {
        PrivateKey(
            SigningKey::generate()
            ) 
     }
-    fn public_key(&self) -> PublicKey {
+    pub fn public_key(&self) -> PublicKey {
        PublicKey(
            *self.0.verifying_key()
            ) 
     }
-    fn sign_data(&self, data: &[u8]) -> Signature {
+    pub fn sign_data(&self, data: &[u8]) -> Signature {
         self.0.sign(data)
     }
 }
 
-#[derive(Debug)]
-struct PublicKey(
-    VerifyingKey
+#[derive(SchemaWrite, SchemaRead, Debug, Clone, Copy)]
+pub struct PublicKey(
+        #[wincode(with = "PubKeySerializer")]
+        VerifyingKey
     );
 
 impl PublicKey {
-    fn verify(&self, data: &[u8], signature: Signature) -> Result<(), EcdsaError> {
+    pub fn verify(&self, data: &[u8], signature: Signature) -> Result<(), EcdsaError> {
         self.0.verify(data, &signature)
     }
 }
 
+struct PrivKeySerializer;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+unsafe impl<C: ConfigCore> SchemaWrite<C> for PrivKeySerializer {
+    type Src = SigningKey;
+
+    const TYPE_META: TypeMeta = TypeMeta::Dynamic;
+
+    fn size_of(src: &Self::Src) -> WriteResult<usize> {
+       Ok(src.to_bytes().len()) 
+    }
+    fn write(mut writer: impl wincode::io::Writer, src: &Self::Src) -> WriteResult<()> {
+        writer.write(&src.to_bytes())?;
+        Ok(())
+    }
+}
+
+unsafe impl<'de, C: ConfigCore> SchemaRead<'de, C> for PrivKeySerializer {
+   type Dst = SigningKey;
     
-    #[test]
-    fn test() {
-        let priv_key = PrivateKey::new();
-        let pub_key = priv_key.public_key();
-        let data = String::from("Kobe");
-        let datta = String::from("kobe");
-        let signature = priv_key.sign_data(data.as_bytes());
-        let result = pub_key.verify(data.as_bytes(), signature);
-        println!("signature: {:?}", result);
+    const TYPE_META: TypeMeta = TypeMeta::Dynamic;
+
+    fn read(reader: impl wincode::io::Reader<'de>, dst: &mut std::mem::MaybeUninit<Self::Dst>) -> wincode::ReadResult<()> {
+        let bytes = <[u8; 32] as SchemaRead<'de, C>>::get(reader)?;
+        let priv_key = SigningKey::from_slice(&bytes).map_err(|_| wincode::error::ReadError::Custom("invalid public key bytes"))?;
+        dst.write(priv_key);
+        Ok(())
+    }
+}
+
+
+
+struct PubKeySerializer;
+
+unsafe impl<C: ConfigCore> SchemaWrite<C> for PubKeySerializer {
+    type Src = VerifyingKey;
+
+    const TYPE_META: TypeMeta = TypeMeta::Dynamic;
+    
+    fn size_of(src: &Self::Src) -> WriteResult<usize> {
+        Ok(src.to_sec1_bytes().len())
+    }
+
+    fn write(mut writer: impl wincode::io::Writer, src: &Self::Src) -> WriteResult<()> {
+        writer.write(&src.to_sec1_bytes())?;
+        Ok(())
+    }
+
+}
+
+unsafe impl<'de, C: ConfigCore> SchemaRead<'de, C> for PubKeySerializer {
+   type Dst = VerifyingKey;
+    
+    const TYPE_META: TypeMeta = TypeMeta::Dynamic;
+
+    fn read(reader: impl wincode::io::Reader<'de>, dst: &mut std::mem::MaybeUninit<Self::Dst>) -> wincode::ReadResult<()> {
+        let bytes= <[u8; 33] as SchemaRead<'de, C>>::get(reader)?;
+        let pub_key = VerifyingKey::from_sec1_bytes(&bytes).map_err(|_| wincode::error::ReadError::Custom("invalid public key bytes"))?;
+        dst.write(pub_key);
+        Ok(())
     }
 }
