@@ -1,8 +1,8 @@
 use k256::{ecdsa::{Signature, SigningKey, VerifyingKey, Error as EcdsaError, signature::{Signer, Verifier}}};
 use k256::elliptic_curve::Generate;
-use wincode::{SchemaRead, SchemaWrite, TypeMeta};
+use wincode::{SchemaRead, SchemaWrite, TypeMeta, WriteResult, ReadResult};
 use wincode::config::ConfigCore;
-use wincode::WriteResult;
+use wincode::io::{Reader, Writer};
 
 #[derive(SchemaWrite, SchemaRead, Debug, Clone)]
 pub struct PrivateKey (
@@ -59,7 +59,7 @@ unsafe impl<'de, C: ConfigCore> SchemaRead<'de, C> for PrivKeySerializer {
     
     const TYPE_META: TypeMeta = TypeMeta::Dynamic;
 
-    fn read(reader: impl wincode::io::Reader<'de>, dst: &mut std::mem::MaybeUninit<Self::Dst>) -> wincode::ReadResult<()> {
+    fn read(reader: impl Reader<'de>, dst: &mut std::mem::MaybeUninit<Self::Dst>) -> ReadResult<()> {
         let bytes = <[u8; 32] as SchemaRead<'de, C>>::get(reader)?;
         let priv_key = SigningKey::from_slice(&bytes).map_err(|_| wincode::error::ReadError::Custom("invalid public key bytes"))?;
         dst.write(priv_key);
@@ -80,7 +80,7 @@ unsafe impl<C: ConfigCore> SchemaWrite<C> for PubKeySerializer {
         Ok(src.to_sec1_bytes().len())
     }
 
-    fn write(mut writer: impl wincode::io::Writer, src: &Self::Src) -> WriteResult<()> {
+    fn write(mut writer: impl Writer, src: &Self::Src) -> WriteResult<()> {
         writer.write(&src.to_sec1_bytes())?;
         Ok(())
     }
@@ -92,7 +92,7 @@ unsafe impl<'de, C: ConfigCore> SchemaRead<'de, C> for PubKeySerializer {
     
     const TYPE_META: TypeMeta = TypeMeta::Dynamic;
 
-    fn read(reader: impl wincode::io::Reader<'de>, dst: &mut std::mem::MaybeUninit<Self::Dst>) -> wincode::ReadResult<()> {
+    fn read(reader: impl Reader<'de>, dst: &mut std::mem::MaybeUninit<Self::Dst>) -> ReadResult<()> {
         let bytes= <[u8; 33] as SchemaRead<'de, C>>::get(reader)?;
         let pub_key = VerifyingKey::from_sec1_bytes(&bytes).map_err(|_| wincode::error::ReadError::Custom("invalid public key bytes"))?;
         dst.write(pub_key);
