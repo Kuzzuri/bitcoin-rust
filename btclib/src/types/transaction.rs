@@ -35,12 +35,17 @@ impl Transaction {
 pub struct TransactionInput {
     prev_txid: U256,
     vout: u32,
-    public_key: Option<PublicKey>,
-    signature: Option<Signature>,
+    script_sig: Option<ScriptSig>
 }
 
 #[derive(SchemaWrite, SchemaRead, Debug, Clone, Copy)]
 pub struct TransactionOutput {
     amount: u64,
+    script_pub_key: PublicKey,
+}
+
+#[derive(SchemaWrite, SchemaRead, Debug, Clone)]
+pub struct ScriptSig {
     public_key: PublicKey,
+    signature: Option<Signature> 
 }
