@@ -1,26 +1,27 @@
-use crate::crypto::{PublicKey, PrivateKey};
+use crate::crypto::{PublicKey, Signature};
 use crate::hash::Hash;
 use crate::VERSION;
 use wincode::{SchemaRead, SchemaWrite};
+use crate::U256;
 
-#[derive(SchemaWrite, SchemaRead, Debug)]
+#[derive(SchemaWrite, SchemaRead, Debug, Clone)]
 pub struct Transaction {
-    version: u8,
-    input_count: u8,
-    input: Vec<TransactionInput>,
-    output_count: u8,
-    output: Vec<TransactionOutput>,
-    locktime: u8
+    version: u32,
+    input_count: u64,
+    inputs: Vec<TransactionInput>,
+    output_count: u64,
+    outputs: Vec<TransactionOutput>,
+    locktime: u32
 }
 
 impl Transaction {
-    pub fn new(inputs: Vec<TransactionInput>, outputs: Vec<TransactionOutput>, locktime: u8) -> Self {
+    pub fn new(inputs: Vec<TransactionInput>, outputs: Vec<TransactionOutput>, locktime: u32) -> Self {
         Transaction {
             version: VERSION,
-            input_count: inputs.len() as u8,
-            input: inputs,
-            output_count: outputs.len() as u8,
-            output: outputs,
+            input_count: inputs.len() as u64,
+            inputs: inputs,
+            output_count: outputs.len() as u64,
+            outputs: outputs,
             locktime: locktime,
         }
     }
@@ -28,17 +29,18 @@ impl Transaction {
         let bytes = wincode::serialize(self).unwrap();
         Hash::hash(Hash::hash(bytes))
     }
-
 }
 
-#[derive(SchemaWrite, SchemaRead, Debug, Clone, Copy)]
+#[derive(SchemaWrite, SchemaRead, Debug, Clone)]
 pub struct TransactionInput {
-    txid: u32,
-    vout: u8,
+    prev_txid: U256,
+    vout: u32,
+    public_key: Option<PublicKey>,
+    signature: Option<Signature>,
 }
 
 #[derive(SchemaWrite, SchemaRead, Debug, Clone, Copy)]
 pub struct TransactionOutput {
-    amount: u8,
+    amount: u64,
     public_key: PublicKey,
 }
