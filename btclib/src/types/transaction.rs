@@ -1,5 +1,5 @@
-use crate::crypto::{PublicKey, Signature};
-use crate::hash::Hash;
+use crate::crypto::{PrivateKey, PublicKey, Signature};
+use crate::sha256::Hash;
 use crate::VERSION;
 use wincode::{SchemaRead, SchemaWrite};
 use crate::U256;
@@ -27,7 +27,17 @@ impl Transaction {
     }
     pub fn get_txid(&self) -> Hash {
         let bytes = wincode::serialize(self).unwrap();
-        Hash::hash(Hash::hash(bytes))
+        Hash::hash256(bytes)
+    }
+    pub fn sign_inputs(&mut self) {
+        let inputs = self.inputs.clone();
+        for input in inputs {
+            // 1. fetch output from prev_tx_id+vout
+            // 2. get scriptPubKey from the output
+            // 3. fetch privateKey corresponding to the scriptPubKey locally
+            
+            // input.sign_input(self, pub_key, priv_key);
+        }
     }
 }
 
@@ -36,6 +46,27 @@ pub struct TransactionInput {
     prev_txid: U256,
     vout: u32,
     script_sig: Option<ScriptSig>
+}
+
+impl TransactionInput {
+    pub fn sign_input(&self, tx: &mut Transaction, pub_key: PublicKey, priv_key: PrivateKey) {
+        let mut tx_clone = tx.clone();
+        for input in tx_clone.inputs.iter_mut() {
+            input.script_sig = None;
+        }
+        let input_bytes = wincode::serialize(self).unwrap();
+        let mut input_index: Option<u8> = None;
+        for (idx, input) in tx_clone.inputs.iter_mut().enumerate() {
+            if input_bytes == wincode::serialize(input).unwrap() {
+                input_index = Some(idx as u8);
+                input.script_sig = Some(ScriptSig {public_key: pub_key, signature: None});
+            }
+        }
+        let tx_hash = Hash::hash256(tx_clone);
+        let signature = priv_key.sign_data(&tx_hash.as_bytes());
+        let signature_input: &mut TransactionInput = tx.inputs.iter_mut().nth(input_index.unwrap() as usize).unwrap();
+        signature_input.script_sig = Some(ScriptSig {public_key: pub_key, signature: Some(signature)});
+    }
 }
 
 #[derive(SchemaWrite, SchemaRead, Debug, Clone, Copy)]

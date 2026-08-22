@@ -20,6 +20,11 @@ impl Hash {
         let hashed = Sha256::digest(serialized);
         Hash(U256::from_little_endian(&hashed))
     }
+    pub fn hash256<T: Encode>(data: T) -> Self {
+        let serialized = wincode::serialize(&data).unwrap();
+        let hashed = Sha256::digest(Sha256::digest(serialized));
+        Hash(U256::from_little_endian(&hashed))
+    }
     pub fn zero() -> Self {
         Hash(U256::zero())
     }

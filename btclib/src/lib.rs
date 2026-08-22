@@ -1,5 +1,5 @@
 mod types;
-mod hash;
+mod sha256;
 mod crypto;
 
 use uint::construct_uint;
@@ -11,4 +11,4 @@ construct_uint! {
 }
 
 
-pub const VERSION: u8 = 1;
+pub const VERSION: u32 = 1;

@@ -1,8 +1,44 @@
-use k256::{ecdsa::{Signature, SigningKey, VerifyingKey, Error as EcdsaError, signature::{Signer, Verifier}}};
+use k256::{ecdsa::{Signature as EcdsaSignature, SigningKey, VerifyingKey, Error as EcdsaError, signature::{Signer, Verifier}}};
 use k256::elliptic_curve::Generate;
 use wincode::{SchemaRead, SchemaWrite, TypeMeta, WriteResult, ReadResult};
 use wincode::config::ConfigCore;
 use wincode::io::{Reader, Writer};
+
+
+#[derive(SchemaWrite, SchemaRead, Debug, Clone)]
+pub struct Signature(
+        #[wincode(with = "SignatureSerializer")]
+        EcdsaSignature
+    );
+
+struct SignatureSerializer;
+
+unsafe impl<C: ConfigCore> SchemaWrite<C> for SignatureSerializer {
+    type Src = EcdsaSignature;
+
+    const TYPE_META: TypeMeta = TypeMeta::Dynamic;
+
+    fn size_of(src: &Self::Src) -> WriteResult<usize> {
+       Ok(src.to_bytes().len()) 
+    }
+    fn write(mut writer: impl wincode::io::Writer, src: &Self::Src) -> WriteResult<()> {
+        writer.write(&src.to_bytes())?;
+        Ok(())
+    }
+}
+
+unsafe impl<'de, C: ConfigCore> SchemaRead<'de, C> for SignatureSerializer {
+   type Dst = EcdsaSignature;
+    
+    const TYPE_META: TypeMeta = TypeMeta::Dynamic;
+
+    fn read(reader: impl Reader<'de>, dst: &mut std::mem::MaybeUninit<Self::Dst>) -> ReadResult<()> {
+        let bytes = <[u8; 32] as SchemaRead<'de, C>>::get(reader)?;
+        let signature = EcdsaSignature::from_slice(&bytes).map_err(|_| wincode::error::ReadError::Custom("invalid public key bytes"))?;
+        dst.write(signature);
+        Ok(())
+    }
+}
 
 #[derive(SchemaWrite, SchemaRead, Debug, Clone)]
 pub struct PrivateKey (
@@ -22,7 +58,7 @@ impl PrivateKey {
            ) 
     }
     pub fn sign_data(&self, data: &[u8]) -> Signature {
-        self.0.sign(data)
+        Signature(self.0.sign(data))
     }
 }
 
@@ -34,7 +70,7 @@ pub struct PublicKey(
 
 impl PublicKey {
     pub fn verify(&self, data: &[u8], signature: Signature) -> Result<(), EcdsaError> {
-        self.0.verify(data, &signature)
+        self.0.verify(data, &signature.0)
     }
 }
 
