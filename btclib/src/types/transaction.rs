@@ -71,8 +71,8 @@ impl TransactionInput {
 
 #[derive(SchemaWrite, SchemaRead, Debug, Clone, Copy)]
 pub struct TransactionOutput {
-    amount: u64,
-    script_pub_key: PublicKey,
+    pub amount: u64,
+    pub script_pub_key: PublicKey,
 }
 
 #[derive(SchemaWrite, SchemaRead, Debug, Clone)]

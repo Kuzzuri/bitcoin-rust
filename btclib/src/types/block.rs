@@ -1,11 +1,13 @@
-use crate::{U256, VERSION};
-use crate::types::{Transaction, transaction};
+use crate::{TARGET, VERSION};
+use crate::types::Transaction;
 use crate::sha256::Hash;
+use std::time::{SystemTime, UNIX_EPOCH};
 
+#[derive(Debug)]
 pub struct Block {
     version: u32,
     previous_block: Hash,
-    merkle_root: U256,
+    merkle_root: Hash,
     time: u32,
     bits: u32,
     nonce: u32,
@@ -14,8 +16,17 @@ pub struct Block {
 }
 
 impl Block {
-    fn new(prev_block: Hash, transactions: Vec<Transaction>) {
-
+    pub fn new(previous_block: Hash, transactions: Vec<Transaction>) -> Self {
+        Block {
+            version: VERSION,
+            previous_block,
+            merkle_root: Block::merkle_root(&transactions),
+            time: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as u32,
+            bits: TARGET,
+            nonce: 0,
+            transaction_count: transactions.len() as u64,
+            transactions: transactions
+        }
     }
 
     fn merkle_root(transactions: &Vec<Transaction>) -> Hash {
@@ -44,5 +55,3 @@ impl Block {
         txs[0]
     }
 }
-
-
