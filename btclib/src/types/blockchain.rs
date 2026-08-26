@@ -18,4 +18,8 @@ impl BlockChain {
         let genesis_block = Block::new(Hash::zero(), vec![coinbase_tx]);
         BlockChain { utxos: HashMap::new(), mempool: Vec::new(), blocks: vec![genesis_block] }
     }
+
+    fn block_height(&self) -> usize {
+        self.blocks.len()
+    }
 }

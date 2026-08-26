@@ -11,7 +11,7 @@ impl<T: SchemaWrite<Configuration, Src = T>> Encode for T {}
 pub trait Decode<'de>: SchemaRead<'de, Configuration> {}
 impl<'de, T: SchemaRead<'de, Configuration>> Decode<'de> for T {}
 
-#[derive(SchemaWrite, SchemaRead, Debug)]
+#[derive(SchemaWrite, SchemaRead, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Hash(U256);
 
 impl Hash {
