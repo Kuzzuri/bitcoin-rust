@@ -1,7 +1,7 @@
-mod types;
-mod sha256;
-mod crypto;
-mod network;
+pub mod types;
+pub mod sha256;
+pub mod crypto;
+pub mod network;
 
 use uint::construct_uint;
 use wincode::{SchemaRead, SchemaWrite};
