@@ -2,8 +2,9 @@ use crate::{TARGET, VERSION};
 use crate::types::Transaction;
 use crate::sha256::Hash;
 use std::time::{SystemTime, UNIX_EPOCH};
+use wincode::{SchemaRead, SchemaWrite};
 
-#[derive(Debug)]
+#[derive(Debug, SchemaWrite, SchemaRead)]
 pub struct Block {
     version: u32,
     previous_block: Hash,

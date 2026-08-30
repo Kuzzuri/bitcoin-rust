@@ -4,11 +4,14 @@ use crate::sha256::Hash;
 use crate::types::{Transaction, TransactionOutput};
 use crate::types::Block;
 use crate::crypto::PrivateKey;
+use wincode::{SchemaRead, SchemaWrite};
+use wincode::config::ConfigCore;
+use wincode::TypeMeta;
 
-#[derive(Debug)]
+#[derive(Debug, SchemaRead, SchemaWrite)]
 struct BlockChain {
     utxos: HashMap<Vec<u8>, TransactionOutput>, 
-    mempool: Vec<(Transaction, DateTime<Utc>)>,
+    mempool: Vec<(Transaction, TimeStamp)>,
     blocks: Vec<Block>
 }
 
@@ -21,5 +24,40 @@ impl BlockChain {
 
     fn block_height(&self) -> usize {
         self.blocks.len()
+    }
+}
+
+#[derive(Debug)]
+struct TimeStamp(DateTime<Utc>);
+
+unsafe impl<C: ConfigCore> SchemaWrite<C> for TimeStamp {
+    type Src = TimeStamp;
+
+    const TYPE_META: wincode::TypeMeta = TypeMeta::Dynamic;
+
+    fn size_of(src: &Self::Src) -> wincode::WriteResult<usize> {
+        Ok(src.0.timestamp_millis().to_le_bytes().len()) 
+    }
+
+    fn write(mut writer: impl wincode::io::Writer, src: &Self::Src) -> wincode::WriteResult<()> {
+        let bytes = src.0.timestamp_millis().to_le_bytes();
+        writer.write(&bytes).unwrap();
+    
+        Ok(())
+    }
+}
+
+unsafe impl<'de, C: ConfigCore> SchemaRead<'de, C> for TimeStamp {
+    type Dst = TimeStamp;
+
+    const TYPE_META: TypeMeta = TypeMeta::Dynamic;
+
+    fn read(reader: impl wincode::io::Reader<'de>, dst: &mut std::mem::MaybeUninit<Self::Dst>) -> wincode::ReadResult<()> {
+        let bytes = <[u8; 8] as SchemaRead<'de, C>>::get(reader).unwrap();
+        let millis = u64::from_le_bytes(bytes);
+        let timestamp = DateTime::from_timestamp_millis(millis as i64).unwrap();
+        dst.write(TimeStamp(timestamp));
+
+        Ok(())
     }
 }
