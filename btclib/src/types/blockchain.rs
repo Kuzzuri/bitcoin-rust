@@ -14,16 +14,20 @@ use std::io::Result as IoResult;
 
 #[derive(Debug, SchemaRead, SchemaWrite)]
 struct BlockChain {
-    utxos: HashMap<Vec<u8>, TransactionOutput>, 
+    utxos: HashMap<String, TransactionOutput>, 
     mempool: Vec<(Transaction, TimeStamp)>,
     blocks: Vec<Block>
 }
 
 impl BlockChain {
     fn new() -> Self {
-        let coinbase_tx = Transaction::new(vec![], vec![TransactionOutput { amount: 50, script_pub_key: PrivateKey::new().public_key() }], 0);
-        let genesis_block = Block::new(Hash::zero(), vec![coinbase_tx]);
-        BlockChain { utxos: HashMap::new(), mempool: Vec::new(), blocks: vec![genesis_block] }
+        let block_reward = TransactionOutput { amount: 50, script_pub_key: PrivateKey::new().public_key() };
+        let coinbase_tx = Transaction::new(vec![], vec![block_reward], 0);
+        let genesis_block = Block::new(Hash::zero(), vec![coinbase_tx.clone()]);
+        let ctx_key = format!("{:?}:{}", coinbase_tx.get_txid(), 0);
+        let mut utxos = HashMap::new();
+        utxos.insert(ctx_key, block_reward);
+        BlockChain { utxos, mempool: Vec::new(), blocks: vec![genesis_block] }
     }
 
     fn block_height(&self) -> usize {
