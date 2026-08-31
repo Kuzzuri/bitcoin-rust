@@ -2,6 +2,8 @@ pub mod types;
 pub mod sha256;
 pub mod crypto;
 pub mod network;
+pub mod error;
+pub mod traits;
 
 use uint::construct_uint;
 use wincode::{SchemaRead, SchemaWrite};

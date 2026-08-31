@@ -1,8 +1,6 @@
 use btclib::crypto::{PrivateKey, PublicKey};
 use wincode::{SchemaRead, SchemaWrite};
-use std::fs::File;
-use std::path::Path;
-use std::io::{Read, Write, Result as IoResult};
+use btclib::traits::Saveable;
 
 #[derive(Debug, SchemaRead, SchemaWrite, PartialEq, Eq, Clone)]
 pub struct KeyPair {
@@ -42,26 +40,6 @@ impl Wallet {
             keys.retain(|kp| *kp != keypair); 
         }
     }
-
-    fn save_to_disk(&self) -> IoResult<()> {
-        let bytes = wincode::serialize(&self).unwrap();
-        let cargo_path = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
-        let path = format!("{}/wallet.dat", cargo_path.display());
-        let mut f = File::create(path)?;
-        f.write_all(&bytes)?;
-        
-        Ok(())
-    }
-
-    fn load_from_disk() -> IoResult<Self> {
-        let cargo_path = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
-        let path = format!("{}/wallet.dat", cargo_path.display());
-        let mut f = File::open(path)?;
-        
-        let mut buf = Vec::new();
-        f.read_to_end(&mut buf).unwrap();
-        let wallet = wincode::deserialize(&buf).unwrap();
-
-        Ok(wallet)
-    }
 }
+
+impl Saveable for Wallet {}

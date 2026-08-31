@@ -5,7 +5,7 @@ use wincode::config::ConfigCore;
 use wincode::io::{Reader, Writer};
 
 
-#[derive(SchemaWrite, SchemaRead, Debug, Clone)]
+#[derive(SchemaWrite, SchemaRead, Debug, Clone, Copy)]
 pub struct Signature(
         #[wincode(with = "SignatureSerializer")]
         EcdsaSignature
@@ -40,7 +40,7 @@ unsafe impl<'de, C: ConfigCore> SchemaRead<'de, C> for SignatureSerializer {
     }
 }
 
-#[derive(SchemaWrite, SchemaRead, Debug, Clone)]
+#[derive(SchemaWrite, SchemaRead, Debug, Clone, PartialEq, Eq)]
 pub struct PrivateKey (
         #[wincode(with = "PrivKeySerializer")]
         SigningKey
@@ -62,7 +62,7 @@ impl PrivateKey {
     }
 }
 
-#[derive(SchemaWrite, SchemaRead, Debug, Clone, Copy)]
+#[derive(SchemaWrite, SchemaRead, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PublicKey(
         #[wincode(with = "PubKeySerializer")]
         VerifyingKey

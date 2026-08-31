@@ -1,17 +1,11 @@
 use std::collections::HashMap;
-use std::io::{Read, Write};
 use chrono::{DateTime, Utc};
 use crate::sha256::Hash;
-use crate::types::{Transaction, TransactionOutput};
-use crate::types::Block;
+use crate::types::{Transaction, TransactionOutput, Block};
 use crate::crypto::PrivateKey;
-use wincode::{SchemaRead, SchemaWrite};
-use wincode::config::ConfigCore;
-use wincode::TypeMeta;
-use std::path::Path;
-use std::fs::File;
-use std::io::Result as IoResult;
+use wincode::{SchemaRead, SchemaWrite, config::ConfigCore, TypeMeta};
 use crate::error::BtcError;
+use crate::traits::Saveable;
 
 #[derive(Debug, SchemaRead, SchemaWrite)]
 struct BlockChain {
@@ -35,28 +29,6 @@ impl BlockChain {
         self.blocks.len()
     }
 
-    fn save_to_disk(&self) -> IoResult<()>{
-        let cargo_path = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
-        let path = format!("{}/blockchain.dat", cargo_path.display());
-        let mut f = File::create(path)?;
-
-        let bytes = wincode::serialize(self).unwrap();
-        f.write_all(&bytes)?;
-
-        Ok(())
-    }
-
-    fn load_from_disk() -> IoResult<Self> {
-        let cargo_path = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
-        let path = format!("{}/blockchain.dat", cargo_path.display());
-        let mut f = File::open(path)?;
-        let mut buffer = vec![];
-        f.read_to_end(&mut buffer)?;
-
-        let blockchain = wincode::deserialize(&buffer).unwrap();
-        Ok(blockchain)
-    }
-
     fn validate_transcation(&self, transaction: &Transaction) -> Result<(), BtcError> {
         let mut total_budget = 0;
         let mut total_spent = 0;
@@ -78,6 +50,8 @@ impl BlockChain {
         Ok(())
     }
 }
+
+impl Saveable for BlockChain {}
 
 #[derive(Debug)]
 struct TimeStamp(DateTime<Utc>);

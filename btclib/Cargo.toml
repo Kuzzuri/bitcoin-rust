@@ -4,12 +4,13 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-chrono = "0.4.45"
+chrono = { version = "0.4.45", features = ["serde"] }
 ecdsa = { version = "0.17.0", features = ["serde"] }
 hex = "0.4.3"
 k256 = { version = "0.14.0", features = ["ecdsa", "serde"] }
 rand = "0.10.2"
 serde = { version = "1.0.229", features = ["derive"] }
 sha2 = "0.11.0"
+thiserror = "2.0.20"
 uint = "0.10.1"
 wincode = { version = "0.6.0", features = ["derive"] }
