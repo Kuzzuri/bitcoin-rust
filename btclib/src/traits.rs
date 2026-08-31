@@ -1,8 +1,17 @@
 use std::path::Path;
 use std::fs::File;
-use crate::sha256::{Decode, Encode};
 use std::io::{Read, Write, Result as IoResult};
+use wincode::{SchemaRead, SchemaWrite, config::Configuration};
 
+// Encode trait for wincode encodable data
+pub trait Encode: SchemaWrite<Configuration, Src = Self> {}
+impl<T: SchemaWrite<Configuration, Src = T>> Encode for T {}
+
+// Decode trait for wincode decodable data
+pub trait Decode<'de>: SchemaRead<'de, Configuration, Dst = Self> {}
+impl<'de, T: SchemaRead<'de,  Configuration, Dst = T>> Decode<'de> for T {}
+
+// Saveable trait for saving wincode serializeable data
 pub trait Saveable {
     fn save_to_file(&self, file_name: &str) -> IoResult<()> 
     where Self: Encode
