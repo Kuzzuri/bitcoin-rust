@@ -8,9 +8,9 @@ use crate::U256;
 pub struct Transaction {
     version: u32,
     input_count: u64,
-    inputs: Vec<TransactionInput>,
+    pub inputs: Vec<TransactionInput>,
     output_count: u64,
-    outputs: Vec<TransactionOutput>,
+    pub outputs: Vec<TransactionOutput>,
     locktime: u32
 }
 
@@ -43,9 +43,9 @@ impl Transaction {
 
 #[derive(SchemaWrite, SchemaRead, Debug, Clone)]
 pub struct TransactionInput {
-    prev_txid: U256,
-    vout: u32,
-    script_sig: Option<ScriptSig>
+    pub prev_txid: Hash,
+    pub vout: u32,
+    pub script_sig: Option<ScriptSig>
 }
 
 impl TransactionInput {

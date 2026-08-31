@@ -7,13 +7,13 @@ use wincode::{SchemaRead, SchemaWrite};
 #[derive(Debug, SchemaWrite, SchemaRead)]
 pub struct Block {
     version: u32,
-    previous_block: Hash,
-    merkle_root: Hash,
+    pub previous_block: Hash,
+    pub merkle_root: Hash,
     time: u32,
     bits: u32,
     nonce: u32,
     transaction_count: u64,
-    transactions: Vec<Transaction>
+    pub transactions: Vec<Transaction>
 }
 
 impl Block {

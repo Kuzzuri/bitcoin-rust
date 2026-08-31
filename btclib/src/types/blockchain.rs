@@ -11,12 +11,13 @@ use wincode::TypeMeta;
 use std::path::Path;
 use std::fs::File;
 use std::io::Result as IoResult;
+use crate::error::BtcError;
 
 #[derive(Debug, SchemaRead, SchemaWrite)]
 struct BlockChain {
-    utxos: HashMap<String, TransactionOutput>, 
-    mempool: Vec<(Transaction, TimeStamp)>,
-    blocks: Vec<Block>
+    pub utxos: HashMap<String, TransactionOutput>, 
+    pub mempool: Vec<(Transaction, TimeStamp)>,
+    pub blocks: Vec<Block>
 }
 
 impl BlockChain {
@@ -24,7 +25,7 @@ impl BlockChain {
         let block_reward = TransactionOutput { amount: 50, script_pub_key: PrivateKey::new().public_key() };
         let coinbase_tx = Transaction::new(vec![], vec![block_reward], 0);
         let genesis_block = Block::new(Hash::zero(), vec![coinbase_tx.clone()]);
-        let ctx_key = format!("{:?}:{}", coinbase_tx.get_txid(), 0);
+        let ctx_key = format!("{}:{}", coinbase_tx.get_txid().as_hex(), 0);
         let mut utxos = HashMap::new();
         utxos.insert(ctx_key, block_reward);
         BlockChain { utxos, mempool: Vec::new(), blocks: vec![genesis_block] }
@@ -54,6 +55,27 @@ impl BlockChain {
 
         let blockchain = wincode::deserialize(&buffer).unwrap();
         Ok(blockchain)
+    }
+
+    fn validate_transcation(&self, transaction: &Transaction) -> Result<(), BtcError> {
+        let mut total_budget = 0;
+        let mut total_spent = 0;
+        for input in &transaction.inputs {
+               let utxo_key = format!("{}:{}", input.prev_txid.as_hex(), input.vout);
+               if let Some(txout) = self.utxos.get(&utxo_key) {
+                    total_budget += txout.amount;
+               } else {
+                    return Err(BtcError::InvalidTransaction);
+               }
+        }
+        for output in &transaction.outputs {
+            total_spent += output.amount;
+        }
+        if total_budget <= 0 || total_spent <= 0 || total_spent > total_budget {
+            return Err(BtcError::InvalidTransaction);
+        }
+
+        Ok(())
     }
 }
 
