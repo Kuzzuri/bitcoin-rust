@@ -1,8 +1,7 @@
 use crate::U256;
 use sha2::{Sha256, Digest};
 use wincode::{SchemaRead, SchemaWrite};
-use wincode::config::Configuration;
-
+use crate::traits::{Encode, Decode};
 
 #[derive(SchemaWrite, SchemaRead, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Hash(U256);
