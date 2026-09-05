@@ -1,8 +1,10 @@
 use crate::crypto::{PrivateKey, PublicKey, Signature};
 use crate::sha256::Hash;
 use crate::VERSION;
+use crate::traits::Saveable;
 use wincode::{SchemaRead, SchemaWrite};
-use crate::U256;
+use crate::types::BlockChain;
+use crate::error::BtcError;
 
 #[derive(SchemaWrite, SchemaRead, Debug, Clone)]
 pub struct Transaction {
@@ -39,9 +41,31 @@ impl Transaction {
             // input.sign_input(self, pub_key, priv_key);
         }
     }
+
+    pub fn calculate_miner_fee(&self) -> Result<u64, BtcError> {
+        let blockchain = BlockChain::load_from_file("blockchain.dat").unwrap();
+        let utxos = blockchain.utxos;
+        let mut budget = 0;
+        let mut spent = 0;
+        for input in &self.inputs {
+            let Some(txout) = utxos.get(&format!("{}:{}", input.prev_txid.as_hex(), input.vout)) else {
+               return Err(BtcError::InvalidTransaction);
+            };
+            budget += txout.amount;
+        }
+
+        for output in &self.outputs {
+            spent += output.amount;
+        }
+
+        if spent > budget {
+            return Err(BtcError::InvalidTransaction);
+        }
+        Ok(budget - spent)
+    }
 }
 
-#[derive(SchemaWrite, SchemaRead, Debug, Clone)]
+#[derive(SchemaWrite, SchemaRead, Debug, Clone, Copy)]
 pub struct TransactionInput {
     pub prev_txid: Hash,
     pub vout: u32,
@@ -75,7 +99,7 @@ pub struct TransactionOutput {
     pub script_pub_key: PublicKey,
 }
 
-#[derive(SchemaWrite, SchemaRead, Debug, Clone)]
+#[derive(SchemaWrite, SchemaRead, Debug, Clone, Copy)]
 pub struct ScriptSig {
     public_key: PublicKey,
     signature: Option<Signature> 

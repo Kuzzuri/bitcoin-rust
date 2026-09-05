@@ -2,13 +2,14 @@ use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 use crate::sha256::Hash;
 use crate::types::{Transaction, TransactionOutput, Block};
-use crate::crypto::PrivateKey;
+use crate::crypto::{PrivateKey, PublicKey};
 use wincode::{SchemaRead, SchemaWrite, config::ConfigCore, TypeMeta};
 use crate::error::BtcError;
 use crate::traits::Saveable;
+use crate::BLOCK_REWARD;
 
 #[derive(Debug, SchemaRead, SchemaWrite)]
-struct BlockChain {
+pub struct BlockChain {
     pub utxos: HashMap<String, TransactionOutput>, 
     pub mempool: Vec<(Transaction, TimeStamp)>,
     pub blocks: Vec<Block>
@@ -16,12 +17,11 @@ struct BlockChain {
 
 impl BlockChain {
     fn new() -> Self {
-        let block_reward = TransactionOutput { amount: 50, script_pub_key: PrivateKey::new().public_key() };
-        let coinbase_tx = Transaction::new(vec![], vec![block_reward], 0);
-        let genesis_block = Block::new(Hash::zero(), vec![coinbase_tx.clone()]);
+        let genesis_block = Block::new(PrivateKey::new().public_key(), Hash::zero(), vec![]);
+        let coinbase_tx = genesis_block.transactions.iter().nth(0).unwrap();
         let ctx_key = format!("{}:{}", coinbase_tx.get_txid().as_hex(), 0);
         let mut utxos = HashMap::new();
-        utxos.insert(ctx_key, block_reward);
+        utxos.insert(ctx_key, *coinbase_tx.outputs.iter().nth(0).unwrap());
         BlockChain { utxos, mempool: Vec::new(), blocks: vec![genesis_block] }
     }
 
@@ -49,11 +49,23 @@ impl BlockChain {
 
         Ok(())
     }
+
+    fn validate_block(&self) {
+
+    }
+
+    fn create_block_template(&self, address: PublicKey) -> Block {
+        let mut txs: Vec<Transaction> = self.mempool.clone().into_iter().map(|(tx, _)| tx).take(50).collect();
+        txs.sort_by_key(|tx| tx.calculate_miner_fee().unwrap());
+        let prev_block = self.blocks.last();
+        let block = Block::new(address, prev_block.unwrap().get_header(), txs);
+        block
+    }
 }
 
 impl Saveable for BlockChain {}
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 struct TimeStamp(DateTime<Utc>);
 
 unsafe impl<C: ConfigCore> SchemaWrite<C> for TimeStamp {
