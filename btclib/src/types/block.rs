@@ -1,5 +1,5 @@
 use crate::crypto::PublicKey;
-use crate::{TARGET, VERSION, BLOCK_REWARD};
+use crate::{TARGET, VERSION, BLOCK_REWARD, target_to_bits};
 use crate::types::{Transaction, TransactionOutput};
 use crate::sha256::Hash;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -32,7 +32,7 @@ impl Block {
             previous_block,
             merkle_root: Block::merkle_root(&txs),
             time: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as u32,
-            bits: TARGET,
+            bits: target_to_bits(TARGET),
             nonce: 0,
             transaction_count: txs.len() as u64,
             transactions: txs

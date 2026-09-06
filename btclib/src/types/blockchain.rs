@@ -6,7 +6,6 @@ use crate::crypto::{PrivateKey, PublicKey};
 use wincode::{SchemaRead, SchemaWrite, config::ConfigCore, TypeMeta};
 use crate::error::BtcError;
 use crate::traits::Saveable;
-use crate::{BLOCK_REWARD, TARGET};
 
 #[derive(Debug, SchemaRead, SchemaWrite)]
 pub struct BlockChain {
@@ -68,7 +67,7 @@ impl BlockChain {
 impl Saveable for BlockChain {}
 
 #[derive(Debug, Clone, Copy)]
-struct TimeStamp(DateTime<Utc>);
+pub struct TimeStamp(DateTime<Utc>);
 
 unsafe impl<C: ConfigCore> SchemaWrite<C> for TimeStamp {
     type Src = TimeStamp;
