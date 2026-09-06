@@ -10,10 +10,23 @@ use wincode::{SchemaRead, SchemaWrite};
 
 construct_uint! {
     #[derive(SchemaWrite, SchemaRead)]
-    struct U256(4);
+    pub struct U256(4);
 }
 
 
 pub const VERSION: u32 = 1;
+pub const BLOCK_REWARD: u64 = 50;
+pub const TARGET: u32 = 0x00FFFF;
 
-pub const TARGET: u32 = 0x1d00ffff;
+fn bits_to_target(nbits: u32) -> U256 {
+    let exp = nbits >> (3 * 8);
+    let mantissa = nbits & 0x00FF_FFFF;
+    U256::from(mantissa) << (exp - 3) * 8
+}
+
+fn target_to_bits(target: U256) -> u32 {
+    let unsig_bytes = target.leading_zeros() / 8;
+    let exp = 32 - unsig_bytes;
+    let mantissa = (target >> (exp - 3) * 8).low_u32();
+    (exp << (3 * 8)) | mantissa
+}

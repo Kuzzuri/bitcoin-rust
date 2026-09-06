@@ -6,7 +6,7 @@ use crate::crypto::{PrivateKey, PublicKey};
 use wincode::{SchemaRead, SchemaWrite, config::ConfigCore, TypeMeta};
 use crate::error::BtcError;
 use crate::traits::Saveable;
-use crate::BLOCK_REWARD;
+use crate::{BLOCK_REWARD, TARGET};
 
 #[derive(Debug, SchemaRead, SchemaWrite)]
 pub struct BlockChain {
@@ -50,8 +50,10 @@ impl BlockChain {
         Ok(())
     }
 
-    fn validate_block(&self) {
-
+    fn validate_block(&self, block: Block) {
+        // validate prev block Hash
+        // validate syntatically
+        // validate merkle root
     }
 
     fn create_block_template(&self, address: PublicKey) -> Block {
@@ -97,5 +99,17 @@ unsafe impl<'de, C: ConfigCore> SchemaRead<'de, C> for TimeStamp {
         dst.write(TimeStamp(timestamp));
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test() {
+        let bc = BlockChain::load_from_file("blockchain.dat").unwrap();
+        let block = Block::new(PrivateKey::new().public_key(), Hash::zero(), vec![]);
+        bc.validate_block(block);
     }
 }

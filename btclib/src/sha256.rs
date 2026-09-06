@@ -4,7 +4,7 @@ use wincode::{SchemaRead, SchemaWrite};
 use crate::traits::{Encode, Decode};
 
 #[derive(SchemaWrite, SchemaRead, Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Hash(U256);
+pub struct Hash(pub U256);
 
 impl Hash {
     pub fn hash<T: Encode>(data: T) -> Self {
