@@ -76,7 +76,7 @@ impl BlockChain {
         }
         // Duplicate tx check
         let mut txs = Vec::new();
-        for tx in block.transactions {
+        for tx in &block.transactions {
             let curr_tx = tx.get_txid();
             if txs.contains(&curr_tx) {
                 return Err(BtcError::InvalidBlock);
@@ -84,17 +84,19 @@ impl BlockChain {
                 txs.push(curr_tx);
             }
 
+            // Validate tx sig
             for input in &tx.inputs {
                 if !input.verify_signature(&tx) {
                     return Err(BtcError::InvalidTransaction);
                 }
             }
         }
-        println!("adding block to mempool...");
+
+        // Validate merkle root
+        if block.merkle_root != Block::merkle_root(&block.transactions) {
+            return Err(BtcError::InvalidBlock);
+        }
         // no dupe blocks
-        // validate tx sig
-        // validate syntatically
-        // validate merkle root
         Ok(())
     }
 
