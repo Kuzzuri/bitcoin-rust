@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use chrono::{DateTime, Utc};
+use crate::{MINING_FEE, TARGET, bits_to_target, target_to_bits};
 use crate::sha256::Hash;
 use crate::types::{Transaction, TransactionOutput, Block};
 use crate::crypto::{PrivateKey, PublicKey};
@@ -49,17 +50,59 @@ impl BlockChain {
         Ok(())
     }
 
-    fn validate_block(&self, block: Block) {
-        // validate prev block Hash
+    fn validate_block(&self, block: Block) -> Result<(), BtcError> {
+        // Nbits check
+        if block.bits != target_to_bits(TARGET) {
+            return Err(BtcError::InvalidBlock);
+        }
+        // Pow check
+        if block.hash().0 >= TARGET {
+            return Err(BtcError::InvalidBlock); 
+        };
+        // Validating prev block hash
+        if self.blocks.last().unwrap().hash() != block.previous_block {
+            return Err(BtcError::InvalidBlock);
+        }
+        // First tx is coinbase
+        let coinbase = block.transactions.first().unwrap();
+        if coinbase.inputs.len() != 0 || coinbase.outputs.len() != 1 || coinbase.outputs.first().unwrap().amount != MINING_FEE {
+            return Err(BtcError::InvalidBlock);
+        }
+        // No other coinbase
+        for tx in block.transactions.iter().skip(1) {
+            if tx.inputs.len() == 0 || tx.outputs.len() == 0 {
+                return Err(BtcError::InvalidBlock);
+            }
+        }
+        // Duplicate tx check
+        let mut txs = Vec::new();
+        for tx in block.transactions {
+            let curr_tx = tx.get_txid();
+            if txs.contains(&curr_tx) {
+                return Err(BtcError::InvalidBlock);
+            } else {
+                txs.push(curr_tx);
+            }
+
+            for input in tx.inputs {
+                if !input.verify_signature() {
+                    return Err(BtcError::InvalidBlock);
+                }
+            }
+        }
+        println!("adding block to mempool...");
+        // no dupe blocks
+        // validate tx sig
         // validate syntatically
         // validate merkle root
+        Ok(())
     }
 
     fn create_block_template(&self, address: PublicKey) -> Block {
         let mut txs: Vec<Transaction> = self.mempool.clone().into_iter().map(|(tx, _)| tx).take(50).collect();
         txs.sort_by_key(|tx| tx.calculate_miner_fee().unwrap());
         let prev_block = self.blocks.last();
-        let block = Block::new(address, prev_block.unwrap().get_header(), txs);
+        let block = Block::new(address, prev_block.unwrap().hash(), txs);
         block
     }
 }
@@ -104,11 +147,17 @@ unsafe impl<'de, C: ConfigCore> SchemaRead<'de, C> for TimeStamp {
 #[cfg(test)]
 mod tests {
     use super::*;
-
+    
     #[test]
     fn test() {
         let bc = BlockChain::load_from_file("blockchain.dat").unwrap();
-        let block = Block::new(PrivateKey::new().public_key(), Hash::zero(), vec![]);
-        bc.validate_block(block);
+        let last_block = bc.blocks.last().unwrap();
+        let block = Block::new(PrivateKey::new().public_key(), last_block.hash(), vec![]);
+        let validated = bc.validate_block(block);
+        if let Ok(_) = validated {
+            println!("valid block");
+        } else {
+            eprintln!("{:?}", validated.err().unwrap());
+        }
     }
 }

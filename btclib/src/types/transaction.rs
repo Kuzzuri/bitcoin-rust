@@ -1,9 +1,9 @@
 use crate::crypto::{PrivateKey, PublicKey, Signature};
 use crate::sha256::Hash;
 use crate::VERSION;
-use crate::traits::Saveable;
+use crate::traits::{Saveable, KeyStore};
 use wincode::{SchemaRead, SchemaWrite};
-use crate::types::BlockChain;
+use crate::types::{BlockChain, blockchain};
 use crate::error::BtcError;
 
 #[derive(SchemaWrite, SchemaRead, Debug, Clone)]
@@ -31,15 +31,18 @@ impl Transaction {
         let bytes = wincode::serialize(self).unwrap();
         Hash::hash256(bytes)
     }
-    pub fn sign_inputs(&mut self) {
+    pub fn sign_inputs(&mut self, keychain: &impl KeyStore) -> Result<(), BtcError>{
         let inputs = self.inputs.clone();
+        let blockchain = BlockChain::load_from_file("blockchain.dat").unwrap();
+        let utxos = blockchain.utxos;
         for input in inputs {
-            // 1. fetch output from prev_tx_id+vout
-            // 2. get scriptPubKey from the output
-            // 3. fetch privateKey corresponding to the scriptPubKey locally
-            
-            // input.sign_input(self, pub_key, priv_key);
+            let Some(output) = utxos.get(&format!("{:?}:{}", input.prev_txid, input.vout)) else {
+                return Err(BtcError::InvalidTransaction); 
+            };
+            let priv_key = keychain.get_value(input.script_sig.unwrap().public_key).unwrap(); 
+            input.sign_input(self, output.script_pub_key, priv_key);
         }
+        Ok(())
     }
 
     pub fn calculate_miner_fee(&self) -> Result<u64, BtcError> {
@@ -91,6 +94,10 @@ impl TransactionInput {
         let signature_input: &mut TransactionInput = tx.inputs.iter_mut().nth(input_index.unwrap() as usize).unwrap();
         signature_input.script_sig = Some(ScriptSig {public_key: pub_key, signature: Some(signature)});
     }
+
+    pub fn verify_signature(&self) -> bool {
+        true
+    }
 }
 
 #[derive(SchemaWrite, SchemaRead, Debug, Clone, Copy)]
@@ -101,6 +108,6 @@ pub struct TransactionOutput {
 
 #[derive(SchemaWrite, SchemaRead, Debug, Clone, Copy)]
 pub struct ScriptSig {
-    public_key: PublicKey,
-    signature: Option<Signature> 
+    pub public_key: PublicKey,
+    pub signature: Option<Signature> 
 }

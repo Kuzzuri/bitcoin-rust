@@ -11,7 +11,7 @@ pub struct Block {
     pub previous_block: Hash,
     pub merkle_root: Hash,
     time: u32,
-    bits: u32,
+    pub bits: u32,
     nonce: u32,
     transaction_count: u64,
     pub transactions: Vec<Transaction>
@@ -63,7 +63,7 @@ impl Block {
         txs[0]
     }
 
-    pub fn get_header(&self) -> Hash {
+    pub fn hash(&self) -> Hash {
         let mut header = Vec::with_capacity(80);
         header.extend_from_slice(&self.version.to_le_bytes());
         header.extend_from_slice(&self.previous_block.as_bytes());
