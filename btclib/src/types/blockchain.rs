@@ -84,9 +84,9 @@ impl BlockChain {
                 txs.push(curr_tx);
             }
 
-            for input in tx.inputs {
-                if !input.verify_signature() {
-                    return Err(BtcError::InvalidBlock);
+            for input in &tx.inputs {
+                if !input.verify_signature(&tx) {
+                    return Err(BtcError::InvalidTransaction);
                 }
             }
         }

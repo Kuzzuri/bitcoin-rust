@@ -39,7 +39,7 @@ impl Transaction {
             let Some(output) = utxos.get(&format!("{:?}:{}", input.prev_txid, input.vout)) else {
                 return Err(BtcError::InvalidTransaction); 
             };
-            let priv_key = keychain.get_value(input.script_sig.unwrap().public_key).unwrap(); 
+            let priv_key = keychain.get_value(output.script_pub_key).unwrap(); 
             input.sign_input(self, output.script_pub_key, priv_key);
         }
         Ok(())
@@ -95,8 +95,19 @@ impl TransactionInput {
         signature_input.script_sig = Some(ScriptSig {public_key: pub_key, signature: Some(signature)});
     }
 
-    pub fn verify_signature(&self) -> bool {
-        true
+    pub fn verify_signature(&self, tx: &Transaction) -> bool {
+        let mut tx_clone = tx.clone();
+        let signature = self.script_sig.unwrap().signature.unwrap(); 
+        let input_bytes = wincode::serialize(self).unwrap();
+        for input in tx_clone.inputs.iter_mut() {
+            if input_bytes == wincode::serialize(input).unwrap() {
+                input.script_sig.unwrap().signature = None; 
+            } else {
+                input.script_sig = None;
+            }
+        }
+        let tx_hash = Hash::hash256(tx_clone);
+        self.script_sig.unwrap().public_key.verify(&tx_hash.as_bytes(), signature).is_ok()
     }
 }
 
