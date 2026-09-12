@@ -1,10 +1,10 @@
 use std::net::TcpStream;
 use btclib::sha256::Hash;
+use btclib::traits::Saveable;
 use btclib::{crypto::PublicKey, network::Message, types::Block};
 use btclib::TARGET;
 use btclib::types::BlockChain;
 use std::{time, thread};
-
 
 struct Miner {
     address: PublicKey
@@ -35,28 +35,9 @@ async fn handle_stream(stream: &TcpStream) {
 
 #[tokio::main]
 async fn main(){
+    let pk = PublicKey::load_from_file("umut_public.pem").unwrap();
+    let miner = Miner::new(pk);
+
     let stream = TcpStream::connect("127.0.0.1:8333").unwrap();
     handle_stream(&stream).await;
-}
-
-
-#[cfg(test)]
-mod tests {
-   use btclib::{crypto::PrivateKey, traits::Saveable};
-
-use super::*;
-
-   #[test]
-   fn test() {
-      let miner = Miner::new(PrivateKey::new().public_key());
-      let bc = BlockChain::load_from_file("blockchain.dat").unwrap();
-      let template = bc.create_block_template(miner.address);
-      let next_block = miner.mine_block(template);
-      match bc.validate_block(next_block) {
-          Ok(()) => {
-              println!("valid block");
-          },
-          _ => eprintln!("invalid block"),
-      }
-   }
 }
