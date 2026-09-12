@@ -3,7 +3,7 @@ use sha2::{Sha256, Digest};
 use wincode::{SchemaRead, SchemaWrite};
 use crate::traits::{Encode, Decode};
 
-#[derive(SchemaWrite, SchemaRead, Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(SchemaWrite, SchemaRead, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Hash(pub U256);
 
 impl Hash {
@@ -24,10 +24,13 @@ impl Hash {
         self.0.to_little_endian()
     }
     pub fn as_hex(&self) -> String {
-        let bytes = self.as_bytes();
-        hex::encode(bytes)
+        hex::encode(self.as_bytes())
     }
     pub fn matches_target(&self, target: Hash) -> bool {
         self.0 < target.0 
+    }
+    pub fn hex_str_to_hash(hex_str: &str) -> Hash {
+        let dec = U256::from_str_radix(hex_str, 16).unwrap();
+        Hash(dec)
     }
 }

@@ -29,7 +29,7 @@ impl BlockChain {
         self.blocks.len()
     }
 
-    fn validate_transcation(&self, transaction: &Transaction) -> Result<(), BtcError> {
+    pub fn validate_transcation(&self, transaction: &Transaction) -> Result<(), BtcError> {
         let mut total_budget = 0;
         let mut total_spent = 0;
         for input in &transaction.inputs {
@@ -50,7 +50,7 @@ impl BlockChain {
         Ok(())
     }
 
-    fn validate_block(&self, block: Block) -> Result<(), BtcError> {
+    pub fn validate_block(&self, block: Block) -> Result<(), BtcError> {
         // Nbits check
         if block.bits != target_to_bits(TARGET) {
             return Err(BtcError::InvalidBlock);
@@ -90,6 +90,16 @@ impl BlockChain {
                     return Err(BtcError::InvalidTransaction);
                 }
             }
+
+
+        }
+
+        // Validate txs
+        for tx in block.transactions.iter().skip(1) {
+            let Ok(()) = self.validate_transcation(tx) else {
+                println!("{:?}", tx);
+                return Err(BtcError::InvalidTransaction);
+            };
         }
 
         // Validate merkle root
@@ -100,7 +110,7 @@ impl BlockChain {
         Ok(())
     }
 
-    fn create_block_template(&self, address: PublicKey) -> Block {
+    pub fn create_block_template(&self, address: PublicKey) -> Block {
         let mut txs: Vec<Transaction> = self.mempool.clone().into_iter().map(|(tx, _)| tx).take(50).collect();
         txs.sort_by_key(|tx| tx.calculate_miner_fee().unwrap());
         let prev_block = self.blocks.last();

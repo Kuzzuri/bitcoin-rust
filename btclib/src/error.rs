@@ -4,4 +4,6 @@ use thiserror::Error;
 pub enum BtcError {
     #[error("Invalid Transaction")]
     InvalidTransaction,
+    #[error("Invalid Block")]
+    InvalidBlock,
 }

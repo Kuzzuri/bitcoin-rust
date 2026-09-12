@@ -2,6 +2,7 @@ use std::path::Path;
 use std::fs::File;
 use std::io::{Read, Write, Result as IoResult};
 use wincode::{SchemaRead, SchemaWrite, config::Configuration};
+use crate::crypto::{PublicKey, PrivateKey};
 
 // Encode trait for wincode encodable data
 pub trait Encode: SchemaWrite<Configuration, Src = Self> {}
@@ -34,8 +35,12 @@ pub trait Saveable {
         
         let mut buf = Vec::new();
         f.read_to_end(&mut buf)?;
-        let wallet = wincode::deserialize(&buf).unwrap();
+        let source = wincode::deserialize(&buf).unwrap();
 
-        Ok(wallet)
+        Ok(source)
     }
+}
+
+pub trait KeyStore {
+    fn get_value(&self, key: PublicKey) -> Option<PrivateKey>;
 }

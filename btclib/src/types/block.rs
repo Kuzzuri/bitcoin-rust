@@ -12,7 +12,7 @@ pub struct Block {
     pub merkle_root: Hash,
     time: u32,
     pub bits: u32,
-    nonce: u32,
+    pub nonce: u32,
     transaction_count: u64,
     pub transactions: Vec<Transaction>
 }
