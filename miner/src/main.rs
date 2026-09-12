@@ -52,6 +52,11 @@ use super::*;
       let bc = BlockChain::load_from_file("blockchain.dat").unwrap();
       let template = bc.create_block_template(miner.address);
       let next_block = miner.mine_block(template);
-      println!("{:#?}", next_block);
+      match bc.validate_block(next_block) {
+          Ok(()) => {
+              println!("valid block");
+          },
+          _ => eprintln!("invalid block"),
+      }
    }
 }
