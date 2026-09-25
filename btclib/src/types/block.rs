@@ -5,7 +5,7 @@ use crate::sha256::Hash;
 use std::time::{SystemTime, UNIX_EPOCH};
 use wincode::{SchemaRead, SchemaWrite};
 
-#[derive(Debug, SchemaWrite, SchemaRead)]
+#[derive(Debug, SchemaWrite, SchemaRead, Clone)]
 pub struct Block {
     version: u32,
     pub previous_block: Hash,

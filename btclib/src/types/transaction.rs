@@ -6,7 +6,7 @@ use wincode::{SchemaRead, SchemaWrite};
 use crate::types::{BlockChain, blockchain};
 use crate::error::BtcError;
 
-#[derive(SchemaWrite, SchemaRead, Debug, Clone)]
+#[derive(SchemaWrite, SchemaRead, Debug, Clone, PartialEq, Eq)]
 pub struct Transaction {
     version: u32,
     input_count: u64,
@@ -36,7 +36,7 @@ impl Transaction {
         let blockchain = BlockChain::load_from_file("blockchain.dat").unwrap();
         let utxos = blockchain.utxos;
         for input in inputs {
-            let Some(output) = utxos.get(&format!("{:?}:{}", input.prev_txid, input.vout)) else {
+            let Some(output) = utxos.get(&format!("{:x}:{}", input.prev_txid.0, input.vout)) else {
                 return Err(BtcError::InvalidTransaction); 
             };
             let priv_key = keychain.get_value(output.script_pub_key).unwrap(); 
@@ -51,7 +51,7 @@ impl Transaction {
         let mut budget = 0;
         let mut spent = 0;
         for input in &self.inputs {
-            let Some(txout) = utxos.get(&format!("{}:{}", input.prev_txid.as_hex(), input.vout)) else {
+            let Some(txout) = utxos.get(&format!("{:x}:{}", input.prev_txid.0, input.vout)) else {
                return Err(BtcError::InvalidTransaction);
             };
             budget += txout.amount;
@@ -68,7 +68,7 @@ impl Transaction {
     }
 }
 
-#[derive(SchemaWrite, SchemaRead, Debug, Clone, Copy)]
+#[derive(SchemaWrite, SchemaRead, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TransactionInput {
     pub prev_txid: Hash,
     pub vout: u32,
@@ -101,7 +101,7 @@ impl TransactionInput {
         let input_bytes = wincode::serialize(self).unwrap();
         for input in tx_clone.inputs.iter_mut() {
             if input_bytes == wincode::serialize(input).unwrap() {
-                input.script_sig.unwrap().signature = None; 
+                input.script_sig.as_mut().unwrap().signature = None;
             } else {
                 input.script_sig = None;
             }
@@ -111,13 +111,13 @@ impl TransactionInput {
     }
 }
 
-#[derive(SchemaWrite, SchemaRead, Debug, Clone, Copy)]
+#[derive(SchemaWrite, SchemaRead, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TransactionOutput {
     pub amount: u64,
     pub script_pub_key: PublicKey,
 }
 
-#[derive(SchemaWrite, SchemaRead, Debug, Clone, Copy)]
+#[derive(SchemaWrite, SchemaRead, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ScriptSig {
     pub public_key: PublicKey,
     pub signature: Option<Signature> 

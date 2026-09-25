@@ -19,7 +19,7 @@ impl BlockChain {
     fn new() -> Self {
         let genesis_block = Block::new(PrivateKey::new().public_key(), Hash::zero(), vec![]);
         let coinbase_tx = genesis_block.transactions.iter().nth(0).unwrap();
-        let ctx_key = format!("{}:{}", coinbase_tx.get_txid().as_hex(), 0);
+        let ctx_key = format!("{:x}:{}", coinbase_tx.get_txid().0, 0);
         let mut utxos = HashMap::new();
         utxos.insert(ctx_key, *coinbase_tx.outputs.iter().nth(0).unwrap());
         BlockChain { utxos, mempool: Vec::new(), blocks: vec![genesis_block] }
@@ -33,10 +33,11 @@ impl BlockChain {
         let mut total_budget = 0;
         let mut total_spent = 0;
         for input in &transaction.inputs {
-               let utxo_key = format!("{}:{}", input.prev_txid.as_hex(), input.vout);
+               let utxo_key = format!("{:x}:{}", input.prev_txid.0, input.vout);
                if let Some(txout) = self.utxos.get(&utxo_key) {
                     total_budget += txout.amount;
                } else {
+                   println!("key not found: {}", utxo_key);
                     return Err(BtcError::InvalidTransaction);
                }
         }
@@ -50,7 +51,7 @@ impl BlockChain {
         Ok(())
     }
 
-    pub fn validate_block(&self, block: Block) -> Result<(), BtcError> {
+    pub fn validate_block(&mut self, block: Block) -> Result<(), BtcError> {
         // Nbits check
         if block.bits != target_to_bits(TARGET) {
             return Err(BtcError::InvalidBlock);
@@ -74,6 +75,7 @@ impl BlockChain {
                 return Err(BtcError::InvalidBlock);
             }
         }
+
         // Duplicate tx check
         let mut txs = Vec::new();
         for tx in &block.transactions {
@@ -93,11 +95,9 @@ impl BlockChain {
 
 
         }
-
         // Validate txs
         for tx in block.transactions.iter().skip(1) {
-            let Ok(()) = self.validate_transcation(tx) else {
-                println!("{:?}", tx);
+            if !self.validate_transcation(tx).is_ok() {
                 return Err(BtcError::InvalidTransaction);
             };
         }
@@ -107,6 +107,12 @@ impl BlockChain {
             return Err(BtcError::InvalidBlock);
         }
         // no dupe blocks
+
+        for tx in &block.transactions {
+            for input in &tx.inputs {
+                self.utxos.remove(&format!("{:x}:{}", input.prev_txid.0, input.vout));
+            }
+        }
         Ok(())
     }
 
@@ -117,12 +123,35 @@ impl BlockChain {
         let block = Block::new(address, prev_block.unwrap().hash(), txs);
         block
     }
+
+    pub fn handle_block_txs(&mut self, block: Block) {
+        // remove tx's from mempool
+        let block_txs = block.transactions;
+        self.mempool.retain(|(tx, _)| !block_txs.contains(tx));
+
+        // add tx outputs to utxos set 
+        for tx in block_txs {
+            let outputs = &tx.outputs;
+            for (idx, output) in outputs.iter().enumerate() {
+                let utxo_key = format!("{:x}:{}", tx.get_txid().0, idx);
+                println!("adding utxo with txid: {:x} with vout: {idx}", tx.get_txid().0);
+                self.utxos.insert(utxo_key, *output);
+            }
+        }
+    }
 }
 
 impl Saveable for BlockChain {}
 
 #[derive(Debug, Clone, Copy)]
 pub struct TimeStamp(DateTime<Utc>);
+
+impl TimeStamp {
+    pub fn new() -> Self {
+        let now_utc = Utc::now();
+        TimeStamp(now_utc)
+    }
+}
 
 unsafe impl<C: ConfigCore> SchemaWrite<C> for TimeStamp {
     type Src = TimeStamp;
@@ -159,17 +188,21 @@ unsafe impl<'de, C: ConfigCore> SchemaRead<'de, C> for TimeStamp {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
+    fn create_chain() {
+        let block_chain = BlockChain::new();
+        block_chain.save_to_file("blockchain.dat");
+
+    }
+
     #[test]
-    fn test() {
-        let bc = BlockChain::load_from_file("blockchain.dat").unwrap();
-        let last_block = bc.blocks.last().unwrap();
-        let block = Block::new(PrivateKey::new().public_key(), last_block.hash(), vec![]);
-        let validated = bc.validate_block(block);
-        if let Ok(_) = validated {
-            println!("valid block");
-        } else {
-            eprintln!("{:?}", validated.err().unwrap());
+    fn utxo_check() {
+        let block_chain = BlockChain::load_from_file("blockchain.dat").unwrap();
+        println!("blocks: {:#?}", block_chain.blocks);
+        println!("utxos: {:#?}", block_chain.utxos);
+        println!("mempool: {:#?}", block_chain.mempool);
+        for block in block_chain.blocks {
+            println!("{:#?}", block.hash());
         }
     }
 }
