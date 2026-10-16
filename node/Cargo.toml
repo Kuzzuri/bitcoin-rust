@@ -5,4 +5,6 @@ edition = "2024"
 
 [dependencies]
 btclib = { path = "../btclib" }
+chrono = { version = "0.4.45", features = ["serde"] }
 tokio = { version = "1.53.1", features = ["full"] }
+wincode = { version = "0.6.1", features = ["derive"] }
