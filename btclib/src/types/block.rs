@@ -1,6 +1,7 @@
-use crate::crypto::PublicKey;
+use crate::crypto::{PrivateKey, PublicKey};
+use crate::types::transaction::ScriptSig;
 use crate::{TARGET, VERSION, BLOCK_REWARD, target_to_bits};
-use crate::types::{Transaction, TransactionOutput};
+use crate::types::{Transaction, TransactionInput, TransactionOutput};
 use crate::sha256::Hash;
 use std::time::{SystemTime, UNIX_EPOCH};
 use wincode::{SchemaRead, SchemaWrite};
@@ -18,8 +19,18 @@ pub struct Block {
 }
 
 impl Block {
-    pub fn new(adress: PublicKey, previous_block: Hash, transactions: Vec<Transaction>) -> Self {
-        let coinbase_tx = Transaction::new(vec![], vec![
+    pub fn new(adress: PublicKey, previous_block: Hash, transactions: Vec<Transaction>, block_height: u32) -> Self {
+        let coinbase_tx = Transaction::new(vec![
+            TransactionInput {
+               prev_txid: Hash::zero(),
+               vout: 0,
+                script_sig: Some(ScriptSig {
+                    block_height: Some(block_height),
+                    public_key: PrivateKey::new().public_key(),
+                    signature: None,
+                })
+            }
+        ], vec![
             TransactionOutput {
                 amount: BLOCK_REWARD,
                 script_pub_key: adress

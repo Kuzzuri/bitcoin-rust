@@ -1,9 +1,14 @@
 use std::net::TcpStream;
 use std::io::{Read, Result, Write};
 use wincode::{SchemaWrite, SchemaRead};
+use crate::types::{Block, Transaction};
+use crate::crypto::PublicKey;
 
 #[derive(Debug, SchemaWrite, SchemaRead)]
 pub enum Message {
+    FetchBlockTemplate(PublicKey),
+    CandidateBlock(Block),
+    ValidateTransaction(Transaction),
 }
 
 impl Message {

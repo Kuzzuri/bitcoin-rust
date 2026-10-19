@@ -1,11 +1,14 @@
+use std::fmt::{Display, Debug};
 use k256::{ecdsa::{Signature as EcdsaSignature, SigningKey, VerifyingKey, Error as EcdsaError, signature::{Signer, Verifier}}};
 use k256::elliptic_curve::Generate;
 use wincode::{SchemaRead, SchemaWrite, TypeMeta, WriteResult, ReadResult};
 use wincode::config::ConfigCore;
 use wincode::io::{Reader, Writer};
 
+use crate::traits::Saveable;
 
-#[derive(SchemaWrite, SchemaRead, Debug, Clone, Copy)]
+
+#[derive(SchemaWrite, SchemaRead, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Signature(
         #[wincode(with = "SignatureSerializer")]
         EcdsaSignature
@@ -33,14 +36,14 @@ unsafe impl<'de, C: ConfigCore> SchemaRead<'de, C> for SignatureSerializer {
     const TYPE_META: TypeMeta = TypeMeta::Dynamic;
 
     fn read(reader: impl Reader<'de>, dst: &mut std::mem::MaybeUninit<Self::Dst>) -> ReadResult<()> {
-        let bytes = <[u8; 32] as SchemaRead<'de, C>>::get(reader)?;
+        let bytes = <[u8; 64] as SchemaRead<'de, C>>::get(reader)?;
         let signature = EcdsaSignature::from_slice(&bytes).map_err(|_| wincode::error::ReadError::Custom("invalid public key bytes"))?;
         dst.write(signature);
         Ok(())
     }
 }
 
-#[derive(SchemaWrite, SchemaRead, Debug, Clone, PartialEq, Eq)]
+#[derive(SchemaWrite, SchemaRead, Clone, PartialEq, Eq)]
 pub struct PrivateKey (
         #[wincode(with = "PrivKeySerializer")]
         SigningKey
@@ -62,7 +65,19 @@ impl PrivateKey {
     }
 }
 
-#[derive(SchemaWrite, SchemaRead, Debug, Clone, Copy, PartialEq, Eq)]
+impl Display for PrivateKey {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", hex::encode(self.0.to_bytes()))
+    }
+}
+
+impl Debug for PrivateKey {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", hex::encode(self.0.to_bytes()))
+    }
+}
+
+#[derive(SchemaWrite, SchemaRead, Clone, Copy, PartialEq, Eq)]
 pub struct PublicKey(
         #[wincode(with = "PubKeySerializer")]
         VerifyingKey
@@ -71,6 +86,20 @@ pub struct PublicKey(
 impl PublicKey {
     pub fn verify(&self, data: &[u8], signature: Signature) -> Result<(), EcdsaError> {
         self.0.verify(data, &signature.0)
+    }
+}
+
+impl Saveable for PublicKey {}
+
+impl Display for PublicKey {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", hex::encode(self.0.to_sec1_bytes()))
+    }
+}
+
+impl Debug for PublicKey {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", hex::encode(self.0.to_sec1_bytes()))
     }
 }
 
@@ -102,8 +131,6 @@ unsafe impl<'de, C: ConfigCore> SchemaRead<'de, C> for PrivKeySerializer {
         Ok(())
     }
 }
-
-
 
 struct PubKeySerializer;
 

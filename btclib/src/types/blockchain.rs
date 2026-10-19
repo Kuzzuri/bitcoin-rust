@@ -17,7 +17,7 @@ pub struct BlockChain {
 
 impl BlockChain {
     fn new() -> Self {
-        let genesis_block = Block::new(PrivateKey::new().public_key(), Hash::zero(), vec![]);
+        let genesis_block = Block::new(PrivateKey::new().public_key(), Hash::zero(), vec![], 0);
         let coinbase_tx = genesis_block.transactions.iter().nth(0).unwrap();
         let ctx_key = format!("{:x}:{}", coinbase_tx.get_txid().0, 0);
         let mut utxos = HashMap::new();
@@ -56,22 +56,25 @@ impl BlockChain {
         if block.bits != target_to_bits(TARGET) {
             return Err(BtcError::InvalidBlock);
         }
+
         // Pow check
         if block.hash().0 >= TARGET {
             return Err(BtcError::InvalidBlock); 
         };
+
         // Validating prev block hash
         if self.blocks.last().unwrap().hash() != block.previous_block {
             return Err(BtcError::InvalidBlock);
         }
         // First tx is coinbase
         let coinbase = block.transactions.first().unwrap();
-        if coinbase.inputs.len() != 0 || coinbase.outputs.len() != 1 || coinbase.outputs.first().unwrap().amount != MINING_FEE {
+        if coinbase.outputs.len() != 1 || coinbase.outputs.first().unwrap().amount != MINING_FEE {
             return Err(BtcError::InvalidBlock);
         }
+
         // No other coinbase
         for tx in block.transactions.iter().skip(1) {
-            if tx.inputs.len() == 0 || tx.outputs.len() == 0 {
+            if tx.outputs.len() == 0 {
                 return Err(BtcError::InvalidBlock);
             }
         }
@@ -88,26 +91,31 @@ impl BlockChain {
 
             // Validate tx sig
             for input in &tx.inputs {
+                if input.prev_txid == Hash::zero() {
+                    continue;
+                }
                 if !input.verify_signature(&tx) {
+                    println!("2");
                     return Err(BtcError::InvalidTransaction);
                 }
             }
 
 
         }
+        println!("1");
         // Validate txs
         for tx in block.transactions.iter().skip(1) {
             if !self.validate_transcation(tx).is_ok() {
                 return Err(BtcError::InvalidTransaction);
             };
         }
-
+        println!("1");
         // Validate merkle root
         if block.merkle_root != Block::merkle_root(&block.transactions) {
             return Err(BtcError::InvalidBlock);
         }
         // no dupe blocks
-
+        println!("1");
         for tx in &block.transactions {
             for input in &tx.inputs {
                 self.utxos.remove(&format!("{:x}:{}", input.prev_txid.0, input.vout));
@@ -120,7 +128,7 @@ impl BlockChain {
         let mut txs: Vec<Transaction> = self.mempool.clone().into_iter().map(|(tx, _)| tx).take(50).collect();
         txs.sort_by_key(|tx| tx.calculate_miner_fee().unwrap());
         let prev_block = self.blocks.last();
-        let block = Block::new(address, prev_block.unwrap().hash(), txs);
+        let block = Block::new(address, prev_block.unwrap().hash(), txs, self.block_height() as u32);
         block
     }
 

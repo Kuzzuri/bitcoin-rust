@@ -1,9 +1,10 @@
+use std::fmt::{Debug, Display, Formatter, Result as FormatResult};
 use crate::U256;
 use sha2::{Sha256, Digest};
 use wincode::{SchemaRead, SchemaWrite};
 use crate::traits::{Encode, Decode};
 
-#[derive(SchemaWrite, SchemaRead, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(SchemaWrite, SchemaRead, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Hash(pub U256);
 
 impl Hash {
@@ -32,5 +33,17 @@ impl Hash {
     pub fn hex_str_to_hash(hex_str: &str) -> Hash {
         let dec = U256::from_str_radix(hex_str, 16).unwrap();
         Hash(dec)
+    }
+}
+
+impl Display for Hash {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FormatResult {
+        write!(f, "{:x}", self.0) 
+    }
+}
+
+impl Debug for Hash {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FormatResult {
+        write!(f, "{:x}", self.0) 
     }
 }

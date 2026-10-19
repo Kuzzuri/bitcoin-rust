@@ -86,13 +86,13 @@ impl TransactionInput {
         for (idx, input) in tx_clone.inputs.iter_mut().enumerate() {
             if input_bytes == wincode::serialize(input).unwrap() {
                 input_index = Some(idx as u8);
-                input.script_sig = Some(ScriptSig {public_key: pub_key, signature: None});
+                input.script_sig = Some(ScriptSig {block_height: None, public_key: pub_key, signature: None});
             }
         }
         let tx_hash = Hash::hash256(tx_clone);
         let signature = priv_key.sign_data(&tx_hash.as_bytes());
         let signature_input: &mut TransactionInput = tx.inputs.iter_mut().nth(input_index.unwrap() as usize).unwrap();
-        signature_input.script_sig = Some(ScriptSig {public_key: pub_key, signature: Some(signature)});
+        signature_input.script_sig = Some(ScriptSig {block_height: None, public_key: pub_key, signature: Some(signature)});
     }
 
     pub fn verify_signature(&self, tx: &Transaction) -> bool {
@@ -119,6 +119,7 @@ pub struct TransactionOutput {
 
 #[derive(SchemaWrite, SchemaRead, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ScriptSig {
+    pub block_height: Option<u32>,
     pub public_key: PublicKey,
     pub signature: Option<Signature> 
 }
