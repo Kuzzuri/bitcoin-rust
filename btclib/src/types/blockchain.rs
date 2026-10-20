@@ -2,11 +2,12 @@ use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 use crate::{BLOCK_REWARD, TARGET, bits_to_target, target_to_bits};
 use crate::sha256::Hash;
-use crate::types::{Transaction, TransactionOutput, Block};
+use crate::types::{Block, Transaction, TransactionInput, TransactionOutput};
 use crate::crypto::{PrivateKey, PublicKey};
 use wincode::{SchemaRead, SchemaWrite, config::ConfigCore, TypeMeta};
 use crate::error::BtcError;
 use crate::traits::Saveable;
+use std::cmp::Reverse;
 
 #[derive(Debug, SchemaRead, SchemaWrite)]
 pub struct BlockChain {
@@ -18,10 +19,7 @@ pub struct BlockChain {
 impl BlockChain {
     fn new() -> Self {
         let genesis_block = Block::new(PrivateKey::new().public_key(), Hash::zero(), vec![], 0);
-        let coinbase_tx = genesis_block.transactions.iter().nth(0).unwrap();
-        let ctx_key = format!("{:x}:{}", coinbase_tx.get_txid().0, 0);
-        let mut utxos = HashMap::new();
-        utxos.insert(ctx_key, *coinbase_tx.outputs.iter().nth(0).unwrap());
+        let utxos = HashMap::new();
         BlockChain { utxos, mempool: Vec::new(), blocks: vec![genesis_block] }
     }
 
@@ -32,10 +30,16 @@ impl BlockChain {
     pub fn validate_transcation(&self, transaction: &Transaction) -> Result<(), BtcError> {
         let mut total_budget = 0;
         let mut total_spent = 0;
+        let mut used_inputs: Vec<String> = Vec::new();
         for input in &transaction.inputs {
                let utxo_key = format!("{:x}:{}", input.prev_txid.0, input.vout);
+               if used_inputs.contains(&utxo_key) {
+                   eprint!("double spend");
+                   return Err(BtcError::InvalidTransaction);
+               }
                if let Some(txout) = self.utxos.get(&utxo_key) {
                     total_budget += txout.amount;
+                    used_inputs.push(utxo_key);
                } else {
                    println!("key not found: {}", utxo_key);
                     return Err(BtcError::InvalidTransaction);
@@ -58,7 +62,7 @@ impl BlockChain {
         }
 
         // Pow check
-        if block.hash().0 >= TARGET {
+        if block.hash().0 > TARGET {
             return Err(BtcError::InvalidBlock); 
         };
 
@@ -68,7 +72,8 @@ impl BlockChain {
         }
         // First tx is coinbase
         let coinbase = block.transactions.first().unwrap();
-        if coinbase.outputs.len() != 1 || coinbase.outputs.first().unwrap().amount != BLOCK_REWARD {
+        let coinbase_reward = BLOCK_REWARD + block.transactions.iter().map(|tx| tx.calculate_miner_fee().unwrap()).sum::<u64>();
+        if coinbase.outputs.len() != 1 || coinbase.outputs.first().unwrap().amount !=  coinbase_reward {
             return Err(BtcError::InvalidBlock);
         }
 
@@ -102,20 +107,17 @@ impl BlockChain {
 
 
         }
-        println!("1");
         // Validate txs
         for tx in block.transactions.iter().skip(1) {
             if !self.validate_transcation(tx).is_ok() {
                 return Err(BtcError::InvalidTransaction);
             };
         }
-        println!("1");
         // Validate merkle root
         if block.merkle_root != Block::merkle_root(&block.transactions) {
             return Err(BtcError::InvalidBlock);
         }
         // no dupe blocks
-        println!("1");
         for tx in &block.transactions {
             for input in &tx.inputs {
                 self.utxos.remove(&format!("{:x}:{}", input.prev_txid.0, input.vout));
@@ -125,8 +127,9 @@ impl BlockChain {
     }
 
     pub fn create_block_template(&self, address: PublicKey) -> Block {
-        let mut txs: Vec<Transaction> = self.mempool.clone().into_iter().map(|(tx, _)| tx).take(50).collect();
-        txs.sort_by_key(|tx| tx.calculate_miner_fee().unwrap());
+        let mut txs: Vec<Transaction> = self.mempool.clone().into_iter().map(|(tx, _)| tx).collect::<Vec<Transaction>>();
+        txs.sort_by_key(|tx| Reverse(tx.calculate_miner_fee().unwrap()));
+        let txs = txs.into_iter().take(50).collect();
         let prev_block = self.blocks.last();
         let block = Block::new(address, prev_block.unwrap().hash(), txs, self.block_height() as u32);
         block
