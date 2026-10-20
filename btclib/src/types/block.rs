@@ -14,7 +14,6 @@ pub struct Block {
     time: u32,
     pub bits: u32,
     pub nonce: u32,
-    transaction_count: u64,
     pub transactions: Vec<Transaction>
 }
 
@@ -45,7 +44,6 @@ impl Block {
             time: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as u32,
             bits: target_to_bits(TARGET),
             nonce: 0,
-            transaction_count: txs.len() as u64,
             transactions: txs
         }
     }
