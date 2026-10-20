@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use chrono::{DateTime, Utc};
-use crate::{MINING_FEE, TARGET, bits_to_target, target_to_bits};
+use crate::{BLOCK_REWARD, TARGET, bits_to_target, target_to_bits};
 use crate::sha256::Hash;
 use crate::types::{Transaction, TransactionOutput, Block};
 use crate::crypto::{PrivateKey, PublicKey};
@@ -68,7 +68,7 @@ impl BlockChain {
         }
         // First tx is coinbase
         let coinbase = block.transactions.first().unwrap();
-        if coinbase.outputs.len() != 1 || coinbase.outputs.first().unwrap().amount != MINING_FEE {
+        if coinbase.outputs.len() != 1 || coinbase.outputs.first().unwrap().amount != BLOCK_REWARD {
             return Err(BtcError::InvalidBlock);
         }
 

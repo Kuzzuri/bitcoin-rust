@@ -9,9 +9,7 @@ use crate::error::BtcError;
 #[derive(SchemaWrite, SchemaRead, Debug, Clone, PartialEq, Eq)]
 pub struct Transaction {
     version: u32,
-    input_count: u64,
     pub inputs: Vec<TransactionInput>,
-    output_count: u64,
     pub outputs: Vec<TransactionOutput>,
     locktime: u32
 }
@@ -20,9 +18,7 @@ impl Transaction {
     pub fn new(inputs: Vec<TransactionInput>, outputs: Vec<TransactionOutput>, locktime: u32) -> Self {
         Transaction {
             version: VERSION,
-            input_count: inputs.len() as u64,
             inputs: inputs,
-            output_count: outputs.len() as u64,
             outputs: outputs,
             locktime: locktime,
         }

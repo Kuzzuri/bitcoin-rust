@@ -32,7 +32,7 @@ impl Block {
             }
         ], vec![
             TransactionOutput {
-                amount: BLOCK_REWARD,
+                amount: transactions.clone().into_iter().map(|tx| tx.calculate_miner_fee().unwrap()).sum::<u64>() + BLOCK_REWARD,
                 script_pub_key: adress
             }
         ], 0);
@@ -78,7 +78,7 @@ impl Block {
         let mut header = Vec::with_capacity(80);
         header.extend_from_slice(&self.version.to_le_bytes());
         header.extend_from_slice(&self.previous_block.as_bytes());
-        header.extend_from_slice(&Block::merkle_root(&self.transactions).as_bytes());
+        header.extend_from_slice(&self.merkle_root.as_bytes());
         header.extend_from_slice(&self.time.to_le_bytes());
         header.extend_from_slice(&self.bits.to_le_bytes());
         header.extend_from_slice(&self.nonce.to_le_bytes());
