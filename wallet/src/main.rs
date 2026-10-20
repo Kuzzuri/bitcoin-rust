@@ -13,7 +13,6 @@ fn main() -> Result<(), IoError> {
     let wallet = Wallet::load_from_file("wallet.dat")?;
     let public_key = PublicKey::load_from_file("umut_public.pem")?;
     let keypair = wallet.find_keypair(public_key).unwrap();
-    println!("{:?}", wallet.get_balance(&vec![keypair]));
     handle_stream(stream, wallet)?;
     Ok(())
 }

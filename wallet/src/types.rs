@@ -48,9 +48,9 @@ impl Wallet {
         None
     }
 
-    fn delete_keypair(&mut self, keypair: KeyPair) {
+    fn delete_keypair(&mut self, public_key: PublicKey) {
         if let Some(keys) = &mut self.keys {
-            keys.retain(|kp| *kp != keypair); 
+            keys.retain(|kp| kp.public_key != public_key); 
         }
     }
 
@@ -114,7 +114,6 @@ impl Wallet {
             let mut inputs: Vec<TransactionInput> = Vec::new();
             for (id, txout) in utxos {
                 let (prev_txid, vout) = id.split_once(":").unwrap();
-                let utxo_key = format!("{prev_txid}:{vout}");
                 curr_amount += txout.amount;
                 let prev_tx_hash = U256::from_str_radix(prev_txid, 16).unwrap();
                 inputs.push(TransactionInput {prev_txid: Hash(prev_tx_hash), vout: vout.parse::<u32>().unwrap(), script_sig: None});
@@ -123,7 +122,8 @@ impl Wallet {
                 }
 
             }
-            let tx = Transaction::new(inputs, vec![TransactionOutput {amount, script_pub_key: PrivateKey::new().public_key()}], 0);
+            let mut tx = Transaction::new(inputs, vec![TransactionOutput {amount, script_pub_key: address}], 0);
+            tx.sign_inputs(self)?;
             return Ok(tx);
         }
         Err(BtcError::InvalidTransaction)
@@ -135,8 +135,26 @@ impl Saveable for Wallet {}
 
 impl KeyStore for Wallet {
     fn get_value(&self, key: PublicKey) -> Option<PrivateKey> {
-        let wallet = Wallet::load_from_file("wallet.dat").unwrap();
-        let keypair = wallet.find_keypair(key);
+        let keypair = self.find_keypair(key);
         Some(keypair.unwrap().private_key)
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use std::time::Duration;
+
+    use btclib::types::TimeStamp;
+
+    use super::*;
+
+    #[test]
+    fn test() {
+        let wallet = Wallet::load_from_file("wallet.dat").unwrap();
+        let key = PublicKey::load_from_file("umut_public.pem").unwrap();
+        let keypair = wallet.find_keypair(key);
+        let balance = wallet.get_balance(&vec![keypair.unwrap()]);
+        println!("{:?}", balance);
     }
 }
