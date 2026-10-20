@@ -28,7 +28,7 @@ impl Hash {
         hex::encode(self.as_bytes())
     }
     pub fn matches_target(&self, target: Hash) -> bool {
-        self.0 < target.0 
+        self.0 <= target.0 
     }
     pub fn hex_str_to_hash(hex_str: &str) -> Hash {
         let dec = U256::from_str_radix(hex_str, 16).unwrap();
