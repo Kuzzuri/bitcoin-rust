@@ -72,7 +72,7 @@ impl BlockChain {
         }
         // First tx is coinbase
         let coinbase = block.transactions.first().unwrap();
-        let coinbase_reward = BLOCK_REWARD + block.transactions.iter().map(|tx| tx.calculate_miner_fee().unwrap()).sum::<u64>();
+        let coinbase_reward = BLOCK_REWARD + block.transactions.iter().skip(1).map(|tx| tx.calculate_miner_fee().unwrap()).sum::<u64>();
         if coinbase.outputs.len() != 1 || coinbase.outputs.first().unwrap().amount !=  coinbase_reward {
             return Err(BtcError::InvalidBlock);
         }
@@ -100,7 +100,6 @@ impl BlockChain {
                     continue;
                 }
                 if !input.verify_signature(&tx) {
-                    println!("2");
                     return Err(BtcError::InvalidTransaction);
                 }
             }
