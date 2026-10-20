@@ -19,8 +19,27 @@ pub async fn handle_stream(stream: &TcpStream, miner: Miner) -> IoResult<()> {
             _ => {
                 println!("unknown message, terminating connection");
                 stream.shutdown(Shutdown::Both)?;
+                return Ok(());
             },
         }
        thread::sleep(dur);
+    }
+}
+
+
+
+#[cfg(test)]
+mod tests {
+    use btclib::{traits::Saveable, types::BlockChain};
+
+    use super::*;
+
+    #[test]
+    fn test() {
+        let mut block_chain = BlockChain::load_from_file("blockchain.dat").unwrap();
+
+        block_chain.mempool.clear();
+        println!("{:#?}", block_chain.mempool.len());
+        block_chain.save_to_file("blokchian.dat").unwrap();
     }
 }

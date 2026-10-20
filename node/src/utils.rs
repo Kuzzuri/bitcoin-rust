@@ -41,7 +41,9 @@ pub fn handle_client(mut stream: &TcpStream) -> IoResult<()>{
             },
             ValidateTransaction(tx) => {
                 if let Err(e) = block_chain.validate_transcation(&tx) {
-                    eprintln!("{:?}", e);
+                    eprintln!("{:?}, terminating connection", e);
+                    stream.shutdown(Shutdown::Both)?;
+                    return Ok(());
                 }
                 
 
@@ -52,6 +54,7 @@ pub fn handle_client(mut stream: &TcpStream) -> IoResult<()>{
             _ => {
                 println!("unknown message, terminating connection");
                 stream.shutdown(Shutdown::Both)?;
+                return Ok(());
             },
         }
     }
