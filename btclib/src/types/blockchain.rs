@@ -187,8 +187,8 @@ unsafe impl<'de, C: ConfigCore> SchemaRead<'de, C> for TimeStamp {
 
     fn read(reader: impl wincode::io::Reader<'de>, dst: &mut std::mem::MaybeUninit<Self::Dst>) -> wincode::ReadResult<()> {
         let bytes = <[u8; 8] as SchemaRead<'de, C>>::get(reader).unwrap();
-        let millis = u64::from_le_bytes(bytes);
-        let timestamp = DateTime::from_timestamp_millis(millis as i64).unwrap();
+        let millis = i64::from_le_bytes(bytes);
+        let timestamp = DateTime::from_timestamp_millis(millis).unwrap();
         dst.write(TimeStamp(timestamp));
 
         Ok(())
