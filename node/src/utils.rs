@@ -1,5 +1,6 @@
 use std::net::{TcpStream, Shutdown};
 use std::io::{Read, Write, Result as IoResult};
+use std::sync::RwLock;
 use btclib::error::BtcError;
 use btclib::network::Message::{self, *};
 use btclib::traits::Saveable;
@@ -7,9 +8,8 @@ use wincode;
 use btclib::types::{BlockChain, Block};
 use btclib::types::TimeStamp;
 
-pub fn handle_client(mut stream: &TcpStream) -> IoResult<()>{
+pub fn handle_client(blockchain: &RwLock<BlockChain>, mut stream: &TcpStream) -> IoResult<()>{
     println!("new client connceted");
-    let mut block_chain = BlockChain::load_from_file("blockchain.dat")?;
     loop {
         let mut size_bytes = [0u8; 4];
         stream.read_exact(&mut size_bytes)?;
@@ -19,20 +19,21 @@ pub fn handle_client(mut stream: &TcpStream) -> IoResult<()>{
 
         let message = wincode::deserialize(&msg_bytes).unwrap();
 
+        let mut chain = blockchain.write().unwrap();
         match message {
             FetchBlockTemplate(address) => {
                 println!("sending candidate block");
-                let candidate_block = &block_chain.create_block_template(address);
+                let candidate_block = chain.create_block_template(address);
                 let message = CandidateBlock(candidate_block.clone());
                 message.send(stream)?;
             },
             CandidateBlock(block) => {
                 println!("received candidate block, verifying");
-                match block_chain.validate_block(block.clone()) {
+                match chain.validate_block(block.clone()) {
                     Ok(_) => {
-                        block_chain.blocks.push(block.clone());
-                        block_chain.handle_block_txs(block);
-                        block_chain.save_to_file("blockchain.dat").unwrap();
+                        chain.blocks.push(block.clone());
+                        chain.handle_block_txs(block);
+                        chain.save_to_file("blockchain.dat").unwrap();
                     },
                     Err(error) => {
                         println!("invalid block: {}", error);
@@ -40,15 +41,15 @@ pub fn handle_client(mut stream: &TcpStream) -> IoResult<()>{
                 }
             },
             ValidateTransaction(tx) => {
-                if let Err(e) = block_chain.validate_transcation(&tx) {
+                if let Err(e) = chain.validate_transcation(&tx) {
                     eprintln!("{:?}, terminating connection", e);
                     stream.shutdown(Shutdown::Both)?;
                     return Ok(());
                 }
                 
 
-                block_chain.mempool.push((tx, TimeStamp::new()));
-                block_chain.save_to_file("blockchain.dat")?;
+                chain.mempool.push((tx, TimeStamp::new()));
+                chain.save_to_file("blockchain.dat")?;
                 return Ok(());
             },
             _ => {
