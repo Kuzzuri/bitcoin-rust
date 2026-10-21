@@ -8,8 +8,8 @@ pub enum BtcError {
     InvalidBlock,
     #[error("Invalid Signature")]
     InvalidSignature,
-    #[error("Unexpected Message")]
-    UnexpectedMessage,
+    #[error("Invalid Message")]
+    InvalidMessage,
     #[error("Double Spend")]
     DoubleSpend
 }
