@@ -1,7 +1,7 @@
 use crate::crypto::{PrivateKey, PublicKey};
 use crate::types::transaction::ScriptSig;
 use crate::{TARGET, VERSION, BLOCK_REWARD, target_to_bits};
-use crate::types::{Transaction, TransactionInput, TransactionOutput};
+use crate::types::{BlockChain, Transaction, TransactionInput, TransactionOutput};
 use crate::sha256::Hash;
 use std::time::{SystemTime, UNIX_EPOCH};
 use wincode::{SchemaRead, SchemaWrite};
@@ -18,7 +18,7 @@ pub struct Block {
 }
 
 impl Block {
-    pub fn new(adress: PublicKey, previous_block: Hash, transactions: Vec<Transaction>, block_height: u32) -> Self {
+    pub fn new(adress: PublicKey, previous_block: Hash, transactions: Vec<Transaction>, block_height: u32, fee: u64) -> Self {
         let coinbase_tx = Transaction::new(vec![
             TransactionInput {
                prev_txid: Hash::zero(),
@@ -31,7 +31,7 @@ impl Block {
             }
         ], vec![
             TransactionOutput {
-                amount: transactions.clone().into_iter().map(|tx| tx.calculate_miner_fee().unwrap()).sum::<u64>() + BLOCK_REWARD,
+                amount: fee,
                 script_pub_key: adress
             }
         ], 0);

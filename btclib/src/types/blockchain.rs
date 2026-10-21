@@ -9,7 +9,7 @@ use crate::error::BtcError;
 use crate::traits::Saveable;
 use std::cmp::Reverse;
 
-#[derive(Debug, SchemaRead, SchemaWrite)]
+#[derive(Debug, SchemaRead, SchemaWrite, Clone)]
 pub struct BlockChain {
     pub utxos: HashMap<String, TransactionOutput>, 
     pub mempool: Vec<(Transaction, TimeStamp)>,
@@ -18,7 +18,7 @@ pub struct BlockChain {
 
 impl BlockChain {
     fn new() -> Self {
-        let genesis_block = Block::new(PrivateKey::new().public_key(), Hash::zero(), vec![], 0);
+        let genesis_block = Block::new(PrivateKey::new().public_key(), Hash::zero(), vec![], 0, BLOCK_REWARD);
         let utxos = HashMap::new();
         BlockChain { utxos, mempool: Vec::new(), blocks: vec![genesis_block] }
     }
@@ -72,7 +72,7 @@ impl BlockChain {
         }
         // First tx is coinbase
         let coinbase = block.transactions.first().unwrap();
-        let coinbase_reward = BLOCK_REWARD + block.transactions.iter().skip(1).map(|tx| tx.calculate_miner_fee().unwrap()).sum::<u64>();
+        let coinbase_reward = BLOCK_REWARD + block.transactions.iter().skip(1).map(|tx| tx.calculate_miner_fee(self).unwrap()).sum::<u64>();
         if coinbase.outputs.len() != 1 || coinbase.outputs.first().unwrap().amount !=  coinbase_reward {
             return Err(BtcError::InvalidBlock);
         }
@@ -127,10 +127,11 @@ impl BlockChain {
 
     pub fn create_block_template(&self, address: PublicKey) -> Block {
         let mut txs: Vec<Transaction> = self.mempool.clone().into_iter().map(|(tx, _)| tx).collect::<Vec<Transaction>>();
-        txs.sort_by_key(|tx| Reverse(tx.calculate_miner_fee().unwrap()));
-        let txs = txs.into_iter().take(50).collect();
+        txs.sort_by_key(|tx| Reverse(tx.calculate_miner_fee(self).unwrap()));
+        let txs: Vec<Transaction> = txs.into_iter().take(50).collect();
         let prev_block = self.blocks.last();
-        let block = Block::new(address, prev_block.unwrap().hash(), txs, self.block_height() as u32);
+        let fee: u64 = txs.clone().into_iter().map(|tx| tx.calculate_miner_fee(self).unwrap()).sum::<u64>() + BLOCK_REWARD;
+        let block = Block::new(address, prev_block.unwrap().hash(), txs, self.block_height() as u32, fee);
         block
     }
 
@@ -192,27 +193,5 @@ unsafe impl<'de, C: ConfigCore> SchemaRead<'de, C> for TimeStamp {
         dst.write(TimeStamp(timestamp));
 
         Ok(())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn create_chain() {
-        let block_chain = BlockChain::new();
-        block_chain.save_to_file("blockchain.dat");
-
-    }
-
-    #[test]
-    fn utxo_check() {
-        let block_chain = BlockChain::load_from_file("blockchain.dat").unwrap();
-        println!("blocks: {:#?}", block_chain.blocks);
-        println!("utxos: {:#?}", block_chain.utxos);
-        println!("mempool: {:#?}", block_chain.mempool);
-        for block in block_chain.blocks {
-            println!("{:#?}", block.hash());
-        }
     }
 }

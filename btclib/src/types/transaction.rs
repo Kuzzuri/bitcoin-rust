@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::crypto::{PrivateKey, PublicKey, Signature};
 use crate::sha256::Hash;
 use crate::VERSION;
@@ -26,10 +28,8 @@ impl Transaction {
     pub fn get_txid(&self) -> Hash {
         Hash::hash256(self)
     }
-    pub fn sign_inputs(&mut self, keychain: &impl KeyStore) -> Result<(), BtcError>{
+    pub fn sign_inputs(&mut self, utxos: HashMap<String, TransactionOutput>, keychain: &impl KeyStore) -> Result<(), BtcError>{
         let inputs = self.inputs.clone();
-        let blockchain = BlockChain::load_from_file("blockchain.dat").unwrap();
-        let utxos = blockchain.utxos;
         for input in inputs {
             let Some(output) = utxos.get(&format!("{:x}:{}", input.prev_txid.0, input.vout)) else {
                 return Err(BtcError::InvalidTransaction); 
@@ -40,9 +40,8 @@ impl Transaction {
         Ok(())
     }
 
-    pub fn calculate_miner_fee(&self) -> Result<u64, BtcError> {
-        let blockchain = BlockChain::load_from_file("blockchain.dat").unwrap();
-        let utxos = blockchain.utxos;
+    pub fn calculate_miner_fee(&self, blockchain: &BlockChain) -> Result<u64, BtcError> {
+        let utxos = &blockchain.utxos;
         let mut budget = 0;
         let mut spent = 0;
         for input in &self.inputs {
