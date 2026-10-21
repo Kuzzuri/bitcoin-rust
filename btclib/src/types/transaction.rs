@@ -24,8 +24,7 @@ impl Transaction {
         }
     }
     pub fn get_txid(&self) -> Hash {
-        let bytes = wincode::serialize(self).unwrap();
-        Hash::hash256(bytes)
+        Hash::hash256(self)
     }
     pub fn sign_inputs(&mut self, keychain: &impl KeyStore) -> Result<(), BtcError>{
         let inputs = self.inputs.clone();

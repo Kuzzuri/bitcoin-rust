@@ -1,5 +1,5 @@
 use std::fmt::{Display, Debug};
-use k256::{ecdsa::{Signature as EcdsaSignature, SigningKey, VerifyingKey, Error as EcdsaError, signature::{Signer, Verifier}}};
+use k256::{ecdsa::{Signature as EcdsaSignature, SigningKey, VerifyingKey, Error as EcdsaError, signature::{Signer, Verifier, hazmat::{PrehashSigner, PrehashVerifier}}}};
 use k256::elliptic_curve::Generate;
 use wincode::{SchemaRead, SchemaWrite, TypeMeta, WriteResult, ReadResult};
 use wincode::config::ConfigCore;
@@ -60,8 +60,8 @@ impl PrivateKey {
            *self.0.verifying_key()
            ) 
     }
-    pub fn sign_data(&self, data: &[u8]) -> Signature {
-        Signature(self.0.sign(data))
+    pub fn sign_data(&self, data: &[u8; 32]) -> Signature {
+        Signature(self.0.sign_prehash(data).unwrap())
     }
 }
 
@@ -84,8 +84,8 @@ pub struct PublicKey(
     );
 
 impl PublicKey {
-    pub fn verify(&self, data: &[u8], signature: Signature) -> Result<(), EcdsaError> {
-        self.0.verify(data, &signature.0)
+    pub fn verify(&self, data: &[u8; 32], signature: Signature) -> Result<(), EcdsaError> {
+        self.0.verify_prehash(data, &signature.0)
     }
 }
 
