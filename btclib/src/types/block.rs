@@ -49,7 +49,7 @@ impl Block {
     }
 
     pub fn merkle_root(transactions: &Vec<Transaction>) -> Hash {
-        let mut txs: Vec<Hash> = transactions.clone().iter().map(|t| Hash::hash256(wincode::serialize(t).unwrap())).collect();
+        let mut txs: Vec<Hash> = transactions.clone().iter().map(|t| Hash::hash256(t)).collect();
         while txs.len() > 1 {
             let mut next = Vec::new();
             for tx_pair in txs.chunks(2) {
