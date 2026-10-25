@@ -36,13 +36,18 @@ fn main() -> Result<(), IoError> {
     }
     let nodes: Nodes;
     let local_nodes = Nodes::load_from_file("peers.dat");
+
+    let blockchain = Arc::new(RwLock::new(chain));
+
+
     match local_nodes {
         Ok(local_nodes) => { 
             nodes = local_nodes;
             println!("current connected nodes: {}", nodes.addresses.len());
             for node in nodes.clone().addresses {
+                let blockchain = Arc::clone(&blockchain);
                 thread::spawn(move || {
-                    handle_peer(node);
+                    handle_peer(&blockchain, node);
                 });
             }
         }
@@ -51,12 +56,12 @@ fn main() -> Result<(), IoError> {
             nodes = Nodes::new();
         }
     }
-    let blockchain = Arc::new(RwLock::new(chain));
+    
     let local_chain = Arc::clone(&blockchain);
-    let local_node = nodes.clone();
+
     ctrlc::set_handler(move || {
         local_chain.write().unwrap().save_to_file("blockchain.dat").unwrap();
-        local_node.save_to_file("peers.dat").unwrap();
+        nodes.save_to_file("peers.dat").unwrap();
         std::process::exit(0);
     }).expect("ctrl c error");
     let ip_adress = env::var("ADDRESS".to_string()).unwrap_or("127.0.0.1".to_string());

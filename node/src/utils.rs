@@ -77,13 +77,18 @@ pub fn handle_client(blockchain_lock: &RwLock<BlockChain>, mut stream: &TcpStrea
     }
 }
 
-pub fn handle_peer(addr: String) {
+pub fn handle_peer(blockchain_lock: &RwLock<BlockChain>, addr: String) {
     let stream = TcpStream::connect(format!("{addr}:8333")).unwrap();
     let msg = Message::Version;
     msg.send(&stream).unwrap();
     let response = Message::receive(&stream).unwrap();
     match response {
-        VerAck(block_height) => { println!("{:?}", block_height) },
+        VerAck(block_height) => { 
+            let blockchain = blockchain_lock.read().unwrap();
+            if (blockchain.block_height() as u8) < block_height {
+                println!("get_headers()");
+            }
+        },
         _ => { eprintln!("{}", BtcError::InvalidMessage) }
     }
 }
