@@ -60,6 +60,14 @@ pub fn handle_client(blockchain_lock: &RwLock<BlockChain>, mut stream: &TcpStrea
                 blockchain.save_to_file("blockchain.dat")?;
                 return Ok(());
             },
+            Version => {
+                let blockchain = blockchain_lock.read().unwrap();
+                let msg = Message::VerAck(blockchain.block_height() as u8);
+                msg.send(&stream).unwrap();
+            },
+            VerAck(block_height) => {
+                println!("{:?}", block_height);
+            }
             _ => {
                 println!("unknown message, terminating connection");
                 stream.shutdown(Shutdown::Both)?;
@@ -71,4 +79,8 @@ pub fn handle_client(blockchain_lock: &RwLock<BlockChain>, mut stream: &TcpStrea
 
 pub fn handle_peer(addr: String) {
     let stream = TcpStream::connect(format!("{addr}:8333")).unwrap();
+    let msg = Message::Version;
+    msg.send(&stream).unwrap();
+    let block_height = Message::receive(&stream).unwrap();
+    println!("{:?}", block_height);
 }
