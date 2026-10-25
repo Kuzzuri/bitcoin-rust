@@ -71,6 +71,4 @@ pub fn handle_client(blockchain_lock: &RwLock<BlockChain>, mut stream: &TcpStrea
 
 pub fn handle_peer(addr: String) {
     let stream = TcpStream::connect(format!("{addr}:8333")).unwrap();
-    let msg = CandidateBlock(Block::new(PrivateKey::new().public_key(), Hash::zero(), vec![], 8, 24));
-    msg.send(&stream).unwrap();
 }

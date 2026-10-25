@@ -17,7 +17,7 @@ pub struct BlockChain {
 }
 
 impl BlockChain {
-    fn new() -> Self {
+    pub fn new() -> Self {
         let genesis_block = Block::new(PrivateKey::new().public_key(), Hash::zero(), vec![], 0, BLOCK_REWARD);
         let utxos = HashMap::new();
         BlockChain { utxos, mempool: Vec::new(), blocks: vec![genesis_block] }
