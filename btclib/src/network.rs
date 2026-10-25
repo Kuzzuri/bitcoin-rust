@@ -11,7 +11,9 @@ pub enum Message {
     CandidateBlock(Block),
     ValidateTransaction(Transaction),
     RequestUtxos,
-    Utxos(HashMap<String, TransactionOutput>)
+    Utxos(HashMap<String, TransactionOutput>),
+    Version,
+    VerAck(u8),
 }
 
 impl Message {

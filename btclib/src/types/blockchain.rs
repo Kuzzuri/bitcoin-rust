@@ -23,7 +23,7 @@ impl BlockChain {
         BlockChain { utxos, mempool: Vec::new(), blocks: vec![genesis_block] }
     }
 
-    fn block_height(&self) -> usize {
+    pub fn block_height(&self) -> usize {
         self.blocks.len()
     }
 
