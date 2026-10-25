@@ -10,7 +10,15 @@ use std::sync::{Arc, RwLock};
 
 
 fn main() -> Result<(), IoError> {
-    let chain = BlockChain::load_from_file("blockchain.dat").unwrap();
+    let chain: BlockChain;
+    let local_chain = BlockChain::load_from_file("blockchain.dat");
+    match local_chain {
+        Ok(local_chain) => { chain = local_chain; },
+        Err(_) => { 
+            println!("starting new chain");
+            chain = BlockChain::new();
+        },
+    }
     let blockchain = Arc::new(RwLock::new(chain));
     let listener = TcpListener::bind("127.0.0.1:8333")?;
     for stream in listener.incoming() {
