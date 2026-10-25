@@ -81,6 +81,9 @@ pub fn handle_peer(addr: String) {
     let stream = TcpStream::connect(format!("{addr}:8333")).unwrap();
     let msg = Message::Version;
     msg.send(&stream).unwrap();
-    let block_height = Message::receive(&stream).unwrap();
-    println!("{:?}", block_height);
+    let response = Message::receive(&stream).unwrap();
+    match response {
+        VerAck(block_height) => { println!("{:?}", block_height) },
+        _ => { eprintln!("{}", BtcError::InvalidMessage) }
+    }
 }
