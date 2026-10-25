@@ -6,7 +6,7 @@ use std::io::{Read, Write, Result as IoResult, Error as IoError};
 use std::thread;
 use btclib::traits::Saveable;
 use btclib::types::BlockChain;
-use utils::handle_client;
+use utils::{handle_client, handle_peer};
 use std::sync::{Arc, RwLock};
 use wincode::{SchemaRead, SchemaWrite};
 use ctrlc;
@@ -40,9 +40,14 @@ fn main() -> Result<(), IoError> {
         Ok(local_nodes) => { 
             nodes = local_nodes;
             println!("current connected nodes: {}", nodes.addresses.len());
+            for node in nodes.clone().addresses {
+                thread::spawn(move || {
+                    handle_peer(node);
+                });
+            }
         }
         Err(_) => {
-            println!("connecting to new nodes");
+            println!("no peers found");
             nodes = Nodes::new();
         }
     }
